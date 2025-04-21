@@ -1,10 +1,10 @@
 export interface Wallet {
   id: string;
   address: string;
-  name?: string;
-  balance?: string;
-  network?: string;
-  currency?: string;
+  privateKey?: string;
+  name: string;
+  balance: string;
+  currency: string;
   isConnected: boolean;
 }
 
@@ -17,5 +17,6 @@ export interface WalletState {
 
 export interface AddWalletParams {
   name: string;
-  address: string;
+  privateKey: string;
+  currency?: string;
 }

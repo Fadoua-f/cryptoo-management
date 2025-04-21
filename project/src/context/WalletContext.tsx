@@ -1,6 +1,7 @@
 import { AddWalletParams, Wallet, WalletState } from '../types/wallet.types';
 import React, { ReactNode, createContext, useContext, useEffect, useReducer } from 'react';
 
+import { blockchainService } from '../lib/blockchain';
 import { useAuth } from './AuthContext';
 import { walletAPI } from '../services/api';
 
@@ -159,15 +160,19 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
     dispatch({ type: 'CONNECT_WALLET_REQUEST' });
     try {
+      // Create a new wallet using Web3
+      const { address, privateKey } = await blockchainService.createWallet();
+      
       // Create a new wallet in the backend
-      const newWallet = await walletAPI.createWallet(user.id, currency);
+      const newWallet = await walletAPI.createWallet(user.id, currency, address);
       
       // Transform API wallet to match our Wallet type
       const wallet: Wallet = {
         id: newWallet.id.toString(),
-        address: newWallet.id.toString(), // Using wallet ID as address
+        address: address,
+        privateKey: privateKey, // Store private key securely
         name: `${currency} Wallet`,
-        balance: newWallet.balance.toString(),
+        balance: '0.00',
         currency: currency,
         isConnected: true,
       };
@@ -182,14 +187,25 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   };
 
   // Add wallet (for manual addition)
-  const addWallet = (params: AddWalletParams) => {
-    const wallet: Wallet = {
-      id: Date.now().toString(),
-      address: params.address,
-      name: params.name,
-      isConnected: true,
-    };
-    dispatch({ type: 'ADD_WALLET', payload: wallet });
+  const addWallet = async (params: AddWalletParams) => {
+    try {
+      // Import wallet using private key
+      const { address } = await blockchainService.importWallet(params.privateKey);
+      
+      const wallet: Wallet = {
+        id: Date.now().toString(),
+        address: address,
+        privateKey: params.privateKey,
+        name: params.name,
+        balance: '0.00',
+        currency: params.currency || 'ETH',
+        isConnected: true,
+      };
+      
+      dispatch({ type: 'ADD_WALLET', payload: wallet });
+    } catch (error) {
+      throw new Error('Invalid private key');
+    }
   };
 
   // Remove wallet
