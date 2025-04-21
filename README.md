@@ -9,64 +9,52 @@ Before you begin, ensure you have the following installed:
 - [Git](https://git-scm.com/download/win)
 - [Visual Studio Code](https://code.visualstudio.com/) (recommended)
 - [MySQL](https://dev.mysql.com/downloads/installer/) (v8.0 or higher)
+  - For Windows: Download and install MySQL Installer
+  - For macOS: Use `brew install mysql`
+  - For Linux: Use your distribution's package manager
 
 ## Installation
 
 1. Clone the repository:
 ```bash
+# For Windows:
+git clone https://github.com/Fadoua-f/cryptoo-management.git
+cd cryptoo-management
+
+# For macOS/Linux:
 git clone https://github.com/Fadoua-f/cryptoo-management.git
 cd cryptoo-management
 ```
 
-2. Install backend dependencies:
-```bash
-cd project/backend
-npm install
-```
+2. Follow the [Backend Setup Guide](backend.md) to set up the database and backend server.
 
 3. Install frontend dependencies:
 ```bash
-cd ../../
+# For Windows:
+cd project
+npm install
+
+# For macOS/Linux:
 cd project
 npm install
 ```
 
-## Environment Setup
-
-1. Create a `.env` file in the `project/backend` directory with the following variables:
-```env
-PORT=5000
-DB_HOST=localhost
-DB_USER=your_mysql_username
-DB_PASSWORD=your_mysql_password
-DB_NAME=crypto_management
-JWT_SECRET=your_jwt_secret
-```
-
-2. Create a `.env` file in the `project` directory (frontend) with:
+4. Create a `.env` file in the `project` directory (frontend) with:
 ```env
 VITE_API_URL=http://localhost:5000
 ```
 
-## Database Setup
-
-1. Open MySQL command line client or MySQL Workbench
-2. Create the database:
-```sql
-CREATE DATABASE crypto_management;
-```
-3. The schema will be automatically created when you start the backend server
-
 ## Running the Application
 
-1. Start the backend server:
-```bash
-cd project/backend
-npm run dev
-```
+1. Start the backend server (follow instructions in [backend.md](backend.md))
 
 2. In a new terminal, start the frontend development server:
 ```bash
+# For Windows:
+cd project
+npm run dev
+
+# For macOS/Linux:
 cd project
 npm run dev
 ```
@@ -99,14 +87,25 @@ project/
 - Real-time cryptocurrency tracking
 - Secure API endpoints
 
+## Documentation
+
+- [Backend Setup Guide](backend.md) - Detailed instructions for setting up the backend
+- [API Documentation](backend.md#api-endpoints) - Available API endpoints and usage
+
 ## Troubleshooting
 
 If you encounter any issues:
 
-1. Make sure all dependencies are installed correctly
-2. Verify that MySQL server is running
-3. Check that all environment variables are set correctly
-4. Ensure ports 5000 and 5173 are not in use by other applications
+1. Check the [Backend Setup Guide](backend.md#troubleshooting) for backend-specific issues
+2. Make sure all dependencies are installed correctly
+3. Verify that MySQL server is running
+   - For Windows: Check Services (services.msc)
+   - For macOS: Use `brew services list`
+   - For Linux: Use `sudo service mysql status`
+4. Check that all environment variables are set correctly
+5. Ensure ports 5000 and 5173 are not in use by other applications
+   - For Windows: Use `netstat -ano | findstr :5000`
+   - For macOS/Linux: Use `lsof -i :5000`
 
 ## Contributing
 
