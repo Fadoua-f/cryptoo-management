@@ -10,9 +10,15 @@ declare global {
   }
 }
 
+// Initialize the injected connector
 const injected = new InjectedConnector({
-  supportedChainIds: [31337], // Only allow local network for now
+  supportedChainIds: [31337], // Hardhat local network
 });
+
+// Function to get the provider
+function getLibrary(provider: any) {
+  return new ethers.providers.Web3Provider(provider);
+}
 
 interface Web3ContextType {
   account: string | null;
@@ -33,24 +39,32 @@ const Web3Context = createContext<Web3ContextType>({
 });
 
 export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const web3React = useWeb3React() as any;
+  return (
+    <Web3ReactProvider getLibrary={getLibrary}>
+      <Web3ContextProvider>{children}</Web3ContextProvider>
+    </Web3ReactProvider>
+  );
+};
+
+const Web3ContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { account, activate, deactivate } = useWeb3React();
   const [balance, setBalance] = useState('0');
   const [contract, setContract] = useState<ethers.Contract | null>(null);
 
   const connect = async () => {
     try {
-      await web3React.activate(injected);
+      await activate(injected);
     } catch (error) {
       console.error('Error connecting to wallet:', error);
     }
   };
 
   const disconnect = () => {
-    web3React.deactivate();
+    deactivate();
   };
 
   useEffect(() => {
-    if (web3React.account) {
+    if (account) {
       const contractAddress = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
       const contractABI = [
         "function deposit() public payable",
@@ -63,20 +77,20 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       const walletContract = new ethers.Contract(contractAddress, contractABI, signer);
       setContract(walletContract);
 
-      provider.getBalance(web3React.account).then((balance) => {
+      provider.getBalance(account).then((balance) => {
         setBalance(ethers.utils.formatEther(balance));
       });
     }
-  }, [web3React.account]);
+  }, [account]);
 
   return (
     <Web3Context.Provider
       value={{
-        account: web3React.account || null,
+        account: account || null,
         balance,
         connect,
         disconnect,
-        isConnected: web3React.isActive,
+        isConnected: !!account,
         contract,
       }}
     >

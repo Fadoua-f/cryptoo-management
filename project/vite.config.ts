@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   define: {
     'process.env': {},
-    global: {},
+    global: 'globalThis',
   },
   resolve: {
     alias: {
@@ -14,9 +14,21 @@ export default defineConfig({
       stream: 'stream-browserify',
       zlib: 'browserify-zlib',
       util: 'util',
+      buffer: 'buffer',
+      events: 'events',
     },
   },
   optimizeDeps: {
-    exclude: ['lucide-react'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
+    include: ['buffer', 'process', 'stream-browserify', 'util'],
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
   },
 });

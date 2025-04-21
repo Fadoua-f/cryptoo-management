@@ -204,7 +204,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       
       dispatch({ type: 'ADD_WALLET', payload: wallet });
     } catch (error) {
-      throw new Error('Invalid private key');
+      // Pass through the more detailed error message
+      throw error instanceof Error ? error : new Error('Failed to add wallet');
     }
   };
 

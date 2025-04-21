@@ -31,14 +31,25 @@ class BlockchainService {
 
   async importWallet(privateKey) {
     try {
-      const account = this.web3.eth.accounts.privateKeyToAccount(privateKey);
+      // Ensure the private key has the 0x prefix
+      const formattedKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+      
+      // Validate private key format
+      if (!/^0x[0-9a-fA-F]{64}$/.test(formattedKey)) {
+        throw new Error('Invalid private key format. Must be a 64-character hex string.');
+      }
+
+      const account = this.web3.eth.accounts.privateKeyToAccount(formattedKey);
       return {
         address: account.address,
         privateKey: account.privateKey,
       };
     } catch (error) {
       console.error('Error importing wallet:', error);
-      throw new Error('Invalid private key');
+      if (error.message.includes('Invalid private key')) {
+        throw new Error('Invalid private key format. Must be a 64-character hex string.');
+      }
+      throw error;
     }
   }
 
