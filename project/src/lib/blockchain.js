@@ -1,26 +1,27 @@
+import Web3 from 'web3';
 import { ethers } from 'ethers';
 
 class BlockchainService {
   constructor() {
+    this.web3 = null;
     this.provider = null;
-    this.signer = null;
     this.initialize();
   }
 
   initialize() {
-    // Initialize provider with Hardhat's local network
-    this.provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+    // Initialize Web3 with local Hardhat network
+    const localUrl = 'http://127.0.0.1:8545';
+    
+    this.web3 = new Web3(localUrl);
+    this.provider = new ethers.providers.JsonRpcProvider(localUrl);
   }
 
   async createWallet() {
     try {
-      // Create a new wallet using ethers
-      const wallet = ethers.Wallet.createRandom();
-      // Connect the wallet to our provider
-      const connectedWallet = wallet.connect(this.provider);
+      const account = this.web3.eth.accounts.create();
       return {
-        address: connectedWallet.address,
-        privateKey: connectedWallet.privateKey,
+        address: account.address,
+        privateKey: account.privateKey,
       };
     } catch (error) {
       console.error('Error creating wallet:', error);
@@ -30,10 +31,10 @@ class BlockchainService {
 
   async importWallet(privateKey) {
     try {
-      const wallet = new ethers.Wallet(privateKey, this.provider);
+      const account = this.web3.eth.accounts.privateKeyToAccount(privateKey);
       return {
-        address: wallet.address,
-        privateKey: wallet.privateKey,
+        address: account.address,
+        privateKey: account.privateKey,
       };
     } catch (error) {
       console.error('Error importing wallet:', error);
@@ -43,49 +44,29 @@ class BlockchainService {
 
   async getBalance(address) {
     try {
-      const balance = await this.provider.getBalance(address);
-      return ethers.formatEther(balance);
+      const balance = await this.web3.eth.getBalance(address);
+      return this.web3.utils.fromWei(balance, 'ether');
     } catch (error) {
       console.error('Error getting balance:', error);
       throw new Error('Failed to get balance');
     }
   }
 
-  async sendTransaction(fromPrivateKey, toAddress, amount) {
+  async sendTransaction(fromAddress, toAddress, amount, privateKey) {
     try {
-      const wallet = new ethers.Wallet(fromPrivateKey, this.provider);
-      const tx = {
+      const transaction = {
+        from: fromAddress,
         to: toAddress,
-        value: ethers.parseEther(amount.toString()),
+        value: this.web3.utils.toWei(amount.toString(), 'ether'),
       };
+
+      const signedTx = await this.web3.eth.accounts.signTransaction(transaction, privateKey);
+      const receipt = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
       
-      const transaction = await wallet.sendTransaction(tx);
-      return await transaction.wait();
+      return receipt;
     } catch (error) {
       console.error('Error sending transaction:', error);
       throw new Error('Failed to send transaction');
-    }
-  }
-
-  // Add method to get some test ETH (only works on Hardhat network)
-  async getTestEther(address) {
-    try {
-      // Get a signer with test ETH (first account in Hardhat's default accounts)
-      const [signer] = await this.provider.getSigner();
-      
-      // Send 1 ETH to the specified address
-      const tx = {
-        to: address,
-        value: ethers.parseEther("1.0")
-      };
-      
-      const transaction = await signer.sendTransaction(tx);
-      await transaction.wait();
-      
-      return true;
-    } catch (error) {
-      console.error('Error getting test ETH:', error);
-      throw new Error('Failed to get test ETH');
     }
   }
 }

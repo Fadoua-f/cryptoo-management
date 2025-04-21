@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/nouamanetazi/projects/crypto/contracts/Wallet.sol": {
-      "lastModificationDate": 1745275782184,
-      "contentHash": "a7d306ff3da499adff268a3368ef7a1a",
+      "lastModificationDate": 1745277205111,
+      "contentHash": "705c6e0bb93c1761d9cb121411d875ab",
       "sourceName": "contracts/Wallet.sol",
       "solcConfig": {
         "version": "0.8.19",
@@ -30,7 +30,7 @@
       },
       "imports": [],
       "versionPragmas": [
-        "^0.8.19"
+        "^0.8.0"
       ],
       "artifacts": [
         "Wallet"
