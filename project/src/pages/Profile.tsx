@@ -1,7 +1,9 @@
+import { LogOut, Mail, User } from 'lucide-react';
 import React, { useEffect } from 'react';
+
 import { Navigate } from 'react-router-dom';
+import TransactionTest from '../components/TransactionTest';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, LogOut } from 'lucide-react';
 
 const Profile: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -19,7 +21,7 @@ const Profile: React.FC = () => {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Mon Profil</h1>
         
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
           <div className="p-8 flex flex-col items-center border-b border-gray-200">
             <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center mb-4">
               <User size={48} className="text-primary-600" />
@@ -63,6 +65,9 @@ const Profile: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Transaction Test Component */}
+        <TransactionTest />
       </div>
     </div>
   );
