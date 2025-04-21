@@ -56,9 +56,9 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   }
 };
 
-// Context
+// Context type
 interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<{ requires2FA?: boolean }>;
   register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => void;
 }
@@ -90,70 +90,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Login implementation using the API
   const login = async (credentials: LoginCredentials) => {
     dispatch({ type: 'LOGIN_REQUEST' });
     try {
-      const { email, password } = credentials;
+      const response = await authAPI.login(credentials);
       
-      if (!email || !password) {
-        throw new Error("L'email et le mot de passe sont requis");
+      // Check if 2FA is required
+      if (response.requires2FA) {
+        return { requires2FA: true };
       }
-      
-      const response = await authAPI.login(email, password);
-      
-      // Store token and user info
-      localStorage.setItem('token', response.token);
-      
-      const user: User = {
-        id: response.userId.toString(),
-        email: email,
-        name: email.split('@')[0], // Use email username as name if not provided
-      };
-      
-      localStorage.setItem('user', JSON.stringify(user));
-      dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+
+      dispatch({ type: 'LOGIN_SUCCESS', payload: response.user });
+      return { requires2FA: false };
     } catch (error) {
-      dispatch({ 
-        type: 'LOGIN_FAILURE', 
-        payload: error instanceof Error ? error.message : 'Erreur de connexion' 
-      });
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      dispatch({ type: 'LOGIN_FAILURE', payload: errorMessage });
+      throw error;
     }
   };
 
-  // Register implementation using the API
   const register = async (credentials: RegisterCredentials) => {
     dispatch({ type: 'REGISTER_REQUEST' });
     try {
-      const { email, password, name } = credentials;
-      
-      if (!email || !password) {
-        throw new Error("L'email et le mot de passe sont requis");
-      }
-      
-      const username = name || email.split('@')[0];
-      const response = await authAPI.register(username, email, password);
-      
-      // Store token and user info
-      localStorage.setItem('token', response.token);
-      
-      const user: User = {
-        id: response.userId.toString(),
-        email: email,
-        name: username,
-      };
-      
-      localStorage.setItem('user', JSON.stringify(user));
+      const user = await authAPI.register(credentials);
       dispatch({ type: 'REGISTER_SUCCESS', payload: user });
     } catch (error) {
-      dispatch({ 
-        type: 'REGISTER_FAILURE', 
-        payload: error instanceof Error ? error.message : 'Erreur d\'inscription' 
-      });
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      dispatch({ type: 'REGISTER_FAILURE', payload: errorMessage });
+      throw error;
     }
   };
 
-  // Logout implementation
   const logout = () => {
     authAPI.logout();
     dispatch({ type: 'LOGOUT' });

@@ -24,12 +24,18 @@ api.interceptors.request.use(
 
 // Auth API
 export const authAPI = {
-  login: async (email: string, password: string) => {
-    const response = await api.post('/auth/login', { email, password });
+  login: async (credentials: { email: string; password: string }) => {
+    const response = await api.post('/auth/login', credentials);
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
     return response.data;
   },
-  register: async (username: string, email: string, password: string) => {
-    const response = await api.post('/auth/register', { username, email, password });
+  register: async (credentials: { email: string; password: string; name?: string }) => {
+    const response = await api.post('/auth/register', credentials);
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
     return response.data;
   },
   logout: () => {
@@ -73,12 +79,20 @@ export const transactionAPI = {
 
 // 2FA API
 export const twoFactorAPI = {
-  setup: async (userId: string) => {
-    const response = await api.post('/2fa/setup', { userId });
+  setup: async () => {
+    const response = await api.post('/2fa/setup');
     return response.data;
   },
-  verify: async (userId: string, token: string) => {
-    const response = await api.post('/2fa/verify', { userId, token });
+  verify: async (token: string) => {
+    const response = await api.post('/2fa/verify', { token });
+    return response.data;
+  },
+  enable: async (token: string) => {
+    const response = await api.post('/2fa/enable', { token });
+    return response.data;
+  },
+  disable: async (token: string) => {
+    const response = await api.post('/2fa/disable', { token });
     return response.data;
   },
 };

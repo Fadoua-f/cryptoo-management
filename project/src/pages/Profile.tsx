@@ -1,8 +1,9 @@
-import { LogOut, Mail, User } from 'lucide-react';
+import { LogOut, Mail, Shield, User } from 'lucide-react';
 import React, { useEffect } from 'react';
 
 import { Navigate } from 'react-router-dom';
 import TransactionTest from '../components/TransactionTest';
+import { TwoFactorSetup } from '../components/auth/TwoFactorSetup';
 import { useAuth } from '../context/AuthContext';
 
 const Profile: React.FC = () => {
@@ -63,6 +64,20 @@ const Profile: React.FC = () => {
                 Déconnexion
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Security Settings Card */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+              <Shield className="mr-2" />
+              Security Settings
+            </h2>
+          </div>
+          <div className="p-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Two-Factor Authentication</h3>
+            <TwoFactorSetup />
           </div>
         </div>
 
