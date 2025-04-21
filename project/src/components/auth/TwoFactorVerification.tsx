@@ -1,39 +1,44 @@
-import { Alert, AlertDescription } from '../ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
+import { ChangeEvent, FormEvent, MouseEvent, useState } from 'react';
 
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { api } from '../../services/api';
 
 interface TwoFactorVerificationProps {
-  onVerificationComplete: () => void;
-  onCancel: () => void;
+  onVerify: (code: string) => Promise<void>;
+  onUseBackupCode: () => void;
 }
 
-export const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
-  onVerificationComplete,
-  onCancel,
-}) => {
-  const [token, setToken] = useState('');
-  const [error, setError] = useState<string>('');
+export function TwoFactorVerification({ onVerify, onUseBackupCode }: TwoFactorVerificationProps) {
+  const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const verifyToken = async () => {
-    if (token.length !== 6) {
-      setError('Please enter a valid 6-digit code');
-      return;
-    }
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    await verifyCode();
+  };
 
+  const verifyCode = async () => {
     setIsLoading(true);
+    setError(null);
+
     try {
-      await api.post('/2fa/verify', { token });
-      onVerificationComplete();
+      await onVerify(verificationCode);
     } catch (err) {
-      setError('Invalid verification code. Please try again.');
+      setError(err instanceof Error ? err.message : 'Invalid verification code');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleButtonClick = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    verifyCode();
+  };
+
+  const handleCodeChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setVerificationCode(e.target.value);
   };
 
   return (
@@ -41,46 +46,47 @@ export const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
       <CardHeader>
         <CardTitle>Two-Factor Authentication</CardTitle>
         <CardDescription>
-          Please enter the verification code from your authenticator app
+          Enter the 6-digit code from your authenticator app
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
+            <label htmlFor="code" className="text-sm font-medium">
+              Verification Code
+            </label>
             <Input
+              id="code"
               type="text"
-              value={token}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setToken(e.target.value)}
-              placeholder="000000"
+              placeholder="Enter 6-digit code"
+              value={verificationCode}
+              onChange={handleCodeChange}
               maxLength={6}
+              required
               autoFocus
             />
           </div>
-
-          <div className="flex space-x-2">
-            <Button
-              onClick={verifyToken}
-              className="flex-1"
-              disabled={isLoading || token.length !== 6}
-            >
-              {isLoading ? 'Verifying...' : 'Verify'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={onCancel}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+        </form>
       </CardContent>
+      <CardFooter className="flex flex-col space-y-2">
+        <Button
+          onClick={handleButtonClick}
+          disabled={isLoading || verificationCode.length !== 6}
+          className="w-full"
+        >
+          {isLoading ? 'Verifying...' : 'Verify'}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={onUseBackupCode}
+          className="w-full"
+        >
+          Use Backup Code
+        </Button>
+      </CardFooter>
     </Card>
   );
-}; 
+} 

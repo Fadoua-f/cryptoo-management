@@ -4,14 +4,14 @@ import { ChangeEvent, FormEvent, MouseEvent, useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 
-interface TwoFactorSetupProps {
-  onSetup: (code: string) => Promise<void>;
-  qrCodeUrl: string;
-  secret: string;
+interface BackupCodesProps {
+  codes: string[];
+  onVerify: (code: string) => Promise<void>;
+  onBack: () => void;
 }
 
-export function TwoFactorSetup({ onSetup, qrCodeUrl, secret }: TwoFactorSetupProps) {
-  const [verificationCode, setVerificationCode] = useState('');
+export function BackupCodes({ codes, onVerify, onBack }: BackupCodesProps) {
+  const [backupCode, setBackupCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,9 +25,9 @@ export function TwoFactorSetup({ onSetup, qrCodeUrl, secret }: TwoFactorSetupPro
     setError(null);
 
     try {
-      await onSetup(verificationCode);
+      await onVerify(backupCode);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to verify 2FA code');
+      setError(err instanceof Error ? err.message : 'Invalid backup code');
     } finally {
       setIsLoading(false);
     }
@@ -39,43 +39,42 @@ export function TwoFactorSetup({ onSetup, qrCodeUrl, secret }: TwoFactorSetupPro
   };
 
   const handleCodeChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setVerificationCode(e.target.value);
+    setBackupCode(e.target.value);
   };
 
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Set Up Two-Factor Authentication</CardTitle>
+        <CardTitle>Backup Codes</CardTitle>
         <CardDescription>
-          Scan the QR code with your authenticator app or enter the secret key manually
+          Enter one of your backup codes to sign in
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex justify-center">
-            <img
-              src={qrCodeUrl}
-              alt="2FA QR Code"
-              className="w-48 h-48"
-            />
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Secret Key:</p>
-            <code className="text-sm bg-muted p-2 rounded-md">{secret}</code>
+          <div className="grid grid-cols-2 gap-2">
+            {codes.map((code, index) => (
+              <code
+                key={index}
+                className="p-2 bg-muted rounded-md text-sm font-mono text-center"
+              >
+                {code}
+              </code>
+            ))}
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="code" className="text-sm font-medium">
-                Verification Code
+                Backup Code
               </label>
               <Input
                 id="code"
                 type="text"
-                placeholder="Enter 6-digit code"
-                value={verificationCode}
+                placeholder="Enter backup code"
+                value={backupCode}
                 onChange={handleCodeChange}
-                maxLength={6}
                 required
+                autoFocus
               />
             </div>
             {error && (
@@ -84,13 +83,20 @@ export function TwoFactorSetup({ onSetup, qrCodeUrl, secret }: TwoFactorSetupPro
           </form>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col space-y-2">
         <Button
           onClick={handleButtonClick}
-          disabled={isLoading || verificationCode.length !== 6}
+          disabled={isLoading || !backupCode}
           className="w-full"
         >
-          {isLoading ? 'Verifying...' : 'Verify and Enable 2FA'}
+          {isLoading ? 'Verifying...' : 'Verify Backup Code'}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className="w-full"
+        >
+          Back to 2FA
         </Button>
       </CardFooter>
     </Card>
