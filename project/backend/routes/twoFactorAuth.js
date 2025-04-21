@@ -8,21 +8,32 @@ const { pool } = require('../config/database');
 
 // Generate 2FA secret for a user
 router.post('/setup', async (req, res) => {
+    console.log('2FA setup request received:', req.body);
     const { userId } = req.body;
+    
+    if (!userId) {
+        console.error('No userId provided in request');
+        return res.status(400).json({ error: 'userId is required' });
+    }
+
     try {
+        console.log('Generating secret for user:', userId);
         const secret = speakeasy.generateSecret({
             name: 'CryptoApp'
         });
 
+        console.log('Storing secret in database...');
         // Store the secret in the database
         await pool.query(
             'UPDATE users SET two_factor_secret = ? WHERE id = ?',
             [secret.base32, userId]
         );
 
+        console.log('Generating QR code...');
         // Generate QR code
         const qrCode = await QRCode.toDataURL(secret.otpauth_url);
 
+        console.log('Sending response...');
         res.json({
             secret: secret.base32,
             qrCode

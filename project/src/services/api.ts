@@ -79,9 +79,16 @@ export const transactionAPI = {
 
 // 2FA API
 export const twoFactorAPI = {
-  setup: async () => {
-    const response = await api.post('/2fa/setup');
-    return response.data;
+  setup: async (userId: string) => {
+    console.log('Making 2FA setup API request for user:', userId);
+    try {
+      const response = await api.post('/2fa/setup', { userId });
+      console.log('2FA setup API response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('2FA setup API error:', error);
+      throw error;
+    }
   },
   verify: async (token: string) => {
     const response = await api.post('/2fa/verify', { token });
