@@ -16,8 +16,8 @@ mysql -u root -p
 mysql -u root
 
 # Once connected, run these commands:
-CREATE DATABASE IF NOT EXISTS crypto_management;
-USE crypto_management;
+CREATE DATABASE IF NOT EXISTS crypto_demo;
+USE crypto_demo;
 
 # Create the necessary tables
 CREATE TABLE users (
@@ -25,6 +25,7 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE,
     email VARCHAR(100) UNIQUE,
     password VARCHAR(255),
+    two_factor_secret VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -46,10 +47,10 @@ CREATE TABLE transactions (
 );
 
 # Insert sample data
-INSERT INTO users (username, email, password) VALUES 
-('john_doe', 'john@example.com', '$2a$10$your_hashed_password'),
-('jane_smith', 'jane@example.com', '$2a$10$your_hashed_password'),
-('bob_wilson', 'bob@example.com', '$2a$10$your_hashed_password');
+INSERT INTO users (username, email) VALUES 
+('john_doe', 'john@example.com'),
+('jane_smith', 'jane@example.com'),
+('bob_wilson', 'bob@example.com');
 
 INSERT INTO wallets (user_id, currency, balance) VALUES 
 (1, 'BTC', 2.5),
@@ -72,23 +73,34 @@ INSERT INTO transactions (wallet_id, type, amount) VALUES
 
 1. Create a `.env` file in the `project\backend` directory (Windows) or `project/backend` (macOS/Linux) with these variables:
 ```env
-PORT=5000
+# Database Configuration
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=crypto_management
-JWT_SECRET=your_jwt_secret
+DB_PASSWORD=
+DB_NAME=crypto_demo
+
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRES_IN=24h
+
+# Server Configuration
+PORT=3001
+NODE_ENV=development
+
+# Rate Limiting
+RATE_LIMIT_WINDOW=15
+RATE_LIMIT_MAX=100
 ```
 
 2. Install dependencies:
 ```bash
 # For Windows:
 cd project\backend
-npm install
+yarn install
 
 # For macOS/Linux:
 cd project/backend
-npm install
+yarn install
 ```
 
 ## Running the Backend
@@ -96,13 +108,13 @@ npm install
 1. Start the development server:
 ```bash
 # For Windows:
-npm run dev
+yarn dev
 
 # For macOS/Linux:
-npm run dev
+yarn dev
 ```
 
-2. The server will start on http://localhost:5000
+2. The server will start on http://localhost:3001
 
 ## API Endpoints
 
@@ -110,17 +122,23 @@ npm run dev
 - POST `/api/auth/register` - Register a new user
 - POST `/api/auth/login` - Login user
 - POST `/api/auth/logout` - Logout user
+- GET `/api/auth/me` - Get current user info
 
 ### Wallets
-- GET `/api/wallets` - Get user's wallets
+- GET `/api/wallets/:userId` - Get all wallets for a user
 - POST `/api/wallets` - Create a new wallet
-- GET `/api/wallets/:id` - Get wallet details
-- PUT `/api/wallets/:id` - Update wallet
+- PUT `/api/wallets/:id` - Update wallet balance
 
 ### Transactions
-- GET `/api/transactions` - Get user's transactions
+- GET `/api/transactions/wallet/:walletId` - Get all transactions for a wallet
 - POST `/api/transactions` - Create a new transaction
-- GET `/api/transactions/:id` - Get transaction details
+
+### Two-Factor Authentication
+- POST `/api/2fa/setup` - Set up 2FA for a user
+- POST `/api/2fa/enable` - Enable 2FA
+- POST `/api/2fa/disable` - Disable 2FA
+- POST `/api/2fa/verify` - Verify 2FA token
+- POST `/api/2fa/verify-backup` - Verify backup code
 
 ## Troubleshooting
 
@@ -132,9 +150,9 @@ npm run dev
    - If using XAMPP, ensure MySQL service is started from XAMPP Control Panel
 
 2. Server Issues:
-   - Check if port 5000 is available
-   - For Windows: Use `netstat -ano | findstr :5000` to check port usage
-   - For macOS/Linux: Use `lsof -i :5000` to check port usage
+   - Check if port 3001 is available
+   - For Windows: Use `netstat -ano | findstr :3001` to check port usage
+   - For macOS/Linux: Use `lsof -i :3001` to check port usage
    - Verify all dependencies are installed
    - Check for any error messages in the console
 
