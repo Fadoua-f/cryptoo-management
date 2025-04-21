@@ -9,11 +9,20 @@ class BlockchainService {
   }
 
   initialize() {
-    // Initialize Web3 with local Hardhat network
-    const localUrl = 'http://127.0.0.1:8545';
-    
-    this.web3 = new Web3(localUrl);
-    this.provider = new ethers.providers.JsonRpcProvider(localUrl);
+    try {
+      // Initialize Web3 with local Hardhat network
+      const localUrl = 'http://127.0.0.1:8545';
+      
+      this.web3 = new Web3(localUrl);
+      this.provider = new ethers.providers.JsonRpcProvider(localUrl);
+      
+      // Test the connection
+      this.web3.eth.getBlockNumber()
+        .then(block => console.log('Connected to network, current block:', block))
+        .catch(err => console.error('Failed to connect to network:', err));
+    } catch (error) {
+      console.error('Failed to initialize blockchain service:', error);
+    }
   }
 
   async createWallet() {
@@ -44,6 +53,11 @@ class BlockchainService {
       }
 
       const account = this.web3.eth.accounts.privateKeyToAccount(formattedKey);
+      
+      // Get initial balance
+      const balance = await this.getBalance(account.address);
+      console.log('Imported wallet balance:', balance, 'ETH');
+      
       return {
         address: account.address,
         privateKey: account.privateKey,
@@ -59,11 +73,22 @@ class BlockchainService {
 
   async getBalance(address) {
     try {
-      const balance = await this.web3.eth.getBalance(address);
-      return this.web3.utils.fromWei(balance, 'ether');
+      console.log('Fetching balance for address:', address);
+      
+      // Try with Web3 first
+      const balanceWei = await this.web3.eth.getBalance(address);
+      const balanceEth = this.web3.utils.fromWei(balanceWei, 'ether');
+      console.log('Balance from Web3:', balanceEth, 'ETH');
+      
+      // Double check with ethers.js
+      const balanceEthers = await this.provider.getBalance(address);
+      const balanceEthersEth = ethers.utils.formatEther(balanceEthers);
+      console.log('Balance from Ethers:', balanceEthersEth, 'ETH');
+      
+      return balanceEth;
     } catch (error) {
       console.error('Error getting balance:', error);
-      throw new Error('Failed to get balance');
+      throw new Error(`Failed to get balance: ${error.message}`);
     }
   }
 

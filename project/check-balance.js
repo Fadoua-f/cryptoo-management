@@ -1,0 +1,1 @@
+const Web3 = require('web3'); const web3 = new Web3('http://127.0.0.1:8545'); web3.eth.getBalance('0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199').then(balance => { console.log('Balance in Wei:', balance); console.log('Balance in ETH:', web3.utils.fromWei(balance, 'ether')); });

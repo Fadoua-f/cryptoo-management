@@ -152,6 +152,39 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     loadWallets();
   }, [isAuthenticated, user]);
 
+  // Update balances periodically
+  useEffect(() => {
+    const updateBalances = async () => {
+      if (state.wallets.length === 0) return;
+
+      try {
+        const updatedWallets = await Promise.all(
+          state.wallets.map(async (wallet) => {
+            try {
+              const balance = await blockchainService.getBalance(wallet.address);
+              return { ...wallet, balance };
+            } catch (error) {
+              console.error(`Failed to update balance for wallet ${wallet.address}:`, error);
+              return wallet;
+            }
+          })
+        );
+
+        dispatch({ type: 'LOAD_WALLETS', payload: updatedWallets });
+      } catch (error) {
+        console.error('Failed to update wallet balances:', error);
+      }
+    };
+
+    // Update immediately
+    updateBalances();
+
+    // Then update every 10 seconds
+    const interval = setInterval(updateBalances, 10000);
+
+    return () => clearInterval(interval);
+  }, [state.wallets.length]); // Only recreate the interval if the number of wallets changes
+
   // Connect wallet (create a new wallet in the backend)
   const connectWallet = async (currency: string) => {
     if (!isAuthenticated || !user) {
@@ -192,20 +225,28 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       // Import wallet using private key
       const { address } = await blockchainService.importWallet(params.privateKey);
       
+      // Get the initial balance
+      const balance = await blockchainService.getBalance(address);
+      
       const wallet: Wallet = {
         id: Date.now().toString(),
         address: address,
         privateKey: params.privateKey,
         name: params.name,
-        balance: '0.00',
-        currency: params.currency || 'ETH',
+        balance: balance,
+        currency: 'ETH',
         isConnected: true,
       };
-      
+
       dispatch({ type: 'ADD_WALLET', payload: wallet });
+      
+      // Set as active wallet if no other wallet is active
+      if (!state.activeWallet) {
+        dispatch({ type: 'SET_ACTIVE_WALLET', payload: wallet });
+      }
     } catch (error) {
-      // Pass through the more detailed error message
-      throw error instanceof Error ? error : new Error('Failed to add wallet');
+      console.error('Error adding wallet:', error);
+      throw error;
     }
   };
 
