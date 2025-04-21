@@ -1,30 +1,31 @@
+import { ExternalLink, Plus, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
-import { useWallet } from '../../context/WalletContext';
-import { Plus, Trash2, ExternalLink } from 'lucide-react';
+
 import { AddWalletParams } from '../../types/wallet.types';
+import { useWallet } from '../../context/WalletContext';
 
 const WalletList: React.FC = () => {
   const { wallets, addWallet, removeWallet, setActiveWallet, activeWallet } = useWallet();
   
   const [showAddWalletForm, setShowAddWalletForm] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
-  const [newWalletAddress, setNewWalletAddress] = useState('');
-  const [formErrors, setFormErrors] = useState<{ name?: string; address?: string }>({});
+  const [newWalletPrivateKey, setNewWalletPrivateKey] = useState('');
+  const [formErrors, setFormErrors] = useState<{ name?: string; privateKey?: string }>({});
 
   const handleAddWalletSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate form
-    const errors: { name?: string; address?: string } = {};
+    const errors: { name?: string; privateKey?: string } = {};
     
     if (!newWalletName.trim()) {
       errors.name = 'Le nom est requis';
     }
     
-    if (!newWalletAddress.trim()) {
-      errors.address = 'L\'adresse est requise';
-    } else if (!/^0x[a-fA-F0-9]{40}$/.test(newWalletAddress)) {
-      errors.address = 'Format d\'adresse Ethereum invalide';
+    if (!newWalletPrivateKey.trim()) {
+      errors.privateKey = 'La clé privée est requise';
+    } else if (!/^0x[a-fA-F0-9]{64}$/.test(newWalletPrivateKey)) {
+      errors.privateKey = 'Format de clé privée invalide';
     }
     
     if (Object.keys(errors).length > 0) {
@@ -34,12 +35,12 @@ const WalletList: React.FC = () => {
     
     const walletParams: AddWalletParams = {
       name: newWalletName.trim(),
-      address: newWalletAddress.trim(),
+      privateKey: newWalletPrivateKey.trim(),
     };
     
     addWallet(walletParams);
     setNewWalletName('');
-    setNewWalletAddress('');
+    setNewWalletPrivateKey('');
     setFormErrors({});
     setShowAddWalletForm(false);
   };
@@ -91,39 +92,30 @@ const WalletList: React.FC = () => {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="walletAddress" className="block text-sm font-medium text-gray-700 mb-1">
-              Adresse Ethereum
+            <label htmlFor="walletPrivateKey" className="block text-sm font-medium text-gray-700 mb-1">
+              Clé Privée
             </label>
             <input
-              type="text"
-              id="walletAddress"
-              value={newWalletAddress}
-              onChange={(e) => setNewWalletAddress(e.target.value)}
+              type="password"
+              id="walletPrivateKey"
+              value={newWalletPrivateKey}
+              onChange={(e) => setNewWalletPrivateKey(e.target.value)}
               className={`block w-full px-3 py-2 border ${
-                formErrors.address ? 'border-error-500' : 'border-gray-300'
+                formErrors.privateKey ? 'border-error-500' : 'border-gray-300'
               } rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500`}
               placeholder="0x..."
             />
-            {formErrors.address && (
-              <p className="mt-1 text-sm text-error-600">{formErrors.address}</p>
+            {formErrors.privateKey && (
+              <p className="mt-1 text-sm text-error-600">{formErrors.privateKey}</p>
             )}
           </div>
 
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setShowAddWalletForm(false)}
-              className="mr-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
-            >
-              Ajouter le portefeuille
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          >
+            Ajouter le portefeuille
+          </button>
         </form>
       )}
 
@@ -161,9 +153,9 @@ const WalletList: React.FC = () => {
                       <span className="font-medium">Solde:</span> {wallet.balance} ETH
                     </p>
                   )}
-                  {wallet.network && (
+                  {wallet.currency && (
                     <p className="text-sm text-gray-600 mt-1">
-                      <span className="font-medium">Réseau:</span> {wallet.network}
+                      <span className="font-medium">Devise:</span> {wallet.currency}
                     </p>
                   )}
                 </div>

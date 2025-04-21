@@ -71,7 +71,7 @@ module.exports = {
 };
 ```
 
-2. Initialize Hardhat:
+2. Initialize Hardhat:d
 ```bash
 npx hardhat init
 ```
