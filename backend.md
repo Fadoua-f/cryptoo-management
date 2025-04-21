@@ -31,6 +31,7 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE,
     email VARCHAR(100) UNIQUE,
     password VARCHAR(255),
+    two_factor_secret VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -132,6 +133,12 @@ npm run dev
 - POST `/api/transactions` - Create a new transaction
 - GET `/api/transactions/:id` - Get transaction details
 
+### Two-Factor Authentication
+- POST `/api/2fa/setup` - Set up 2FA for a user
+- POST `/api/2fa/verify` - Verify 2FA token
+- POST `/api/2fa/enable` - Enable 2FA
+- POST `/api/2fa/disable` - Disable 2FA
+
 ## Troubleshooting
 
 1. Database Connection Issues:
@@ -159,6 +166,21 @@ npm run dev
    - Check the request payload format
    - For Windows: If using PowerShell, ensure you're using the correct line endings (CRLF)
 
+4. Two-Factor Authentication Issues:
+   - If you get "Unknown column 'two_factor_secret' in 'field list'" error:
+     ```sql
+     ALTER TABLE crypto_demo.users ADD COLUMN two_factor_secret VARCHAR(255);
+     ```
+   - If QR code is not loading:
+     - Check if the user is properly logged in
+     - Verify that the backend is running
+     - Check the browser console for any errors
+     - Ensure the user ID is being passed correctly in the request
+   - If verification fails:
+     - Make sure you're using a valid authenticator app
+     - Check if the time on your device is synchronized
+     - Try using the backup codes if available
+
 ## Common Issues and Solutions
 
 1. **"Unknown column 'password' in 'field list'" error**:
@@ -168,16 +190,23 @@ npm run dev
      ALTER TABLE crypto_demo.users ADD COLUMN password VARCHAR(255) AFTER email;
      ```
 
-2. **Database name mismatch**:
+2. **"Unknown column 'two_factor_secret' in 'field list'" error**:
+   - This error occurs when the users table doesn't have a two_factor_secret column
+   - Solution: Add the two_factor_secret column to the users table:
+     ```sql
+     ALTER TABLE crypto_demo.users ADD COLUMN two_factor_secret VARCHAR(255);
+     ```
+
+3. **Database name mismatch**:
    - If you created a database named `crypto_management` but your .env file specifies `crypto_demo`, you'll get connection errors
    - Solution: Either rename your database or update your .env file to match the database name
 
-3. **Port already in use**:
+4. **Port already in use**:
    - If you get an error that port 3001 is already in use, you can either:
      - Kill the process using that port
      - Change the port in your .env file to a different value (e.g., 3002)
 
-4. **ECONNREFUSED error (IPv6 connection issue)**:
+5. **ECONNREFUSED error (IPv6 connection issue)**:
    - If you see an error like `Error: connect ECONNREFUSED ::1:3306`, this is an IPv6 connection issue
    - Solution: Change your DB_HOST in .env from `localhost` to `127.0.0.1` (IPv4 address)
    - This forces the connection to use IPv4 instead of IPv6
