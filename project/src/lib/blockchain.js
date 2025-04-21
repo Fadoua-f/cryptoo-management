@@ -8,20 +8,19 @@ class BlockchainService {
   }
 
   initialize() {
-    // Initialize provider with Alchemy
-    const alchemyKey = process.env.VITE_ALCHEMY_API_KEY;
-    const alchemyUrl = `https://eth-sepolia.g.alchemy.com/v2/${alchemyKey}`;
-    
-    this.provider = new ethers.providers.JsonRpcProvider(alchemyUrl);
+    // Initialize provider with Hardhat's local network
+    this.provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
   }
 
   async createWallet() {
     try {
       // Create a new wallet using ethers
       const wallet = ethers.Wallet.createRandom();
+      // Connect the wallet to our provider
+      const connectedWallet = wallet.connect(this.provider);
       return {
-        address: wallet.address,
-        privateKey: wallet.privateKey,
+        address: connectedWallet.address,
+        privateKey: connectedWallet.privateKey,
       };
     } catch (error) {
       console.error('Error creating wallet:', error);
@@ -45,7 +44,7 @@ class BlockchainService {
   async getBalance(address) {
     try {
       const balance = await this.provider.getBalance(address);
-      return ethers.utils.formatEther(balance);
+      return ethers.formatEther(balance);
     } catch (error) {
       console.error('Error getting balance:', error);
       throw new Error('Failed to get balance');
@@ -57,7 +56,7 @@ class BlockchainService {
       const wallet = new ethers.Wallet(fromPrivateKey, this.provider);
       const tx = {
         to: toAddress,
-        value: ethers.utils.parseEther(amount.toString()),
+        value: ethers.parseEther(amount.toString()),
       };
       
       const transaction = await wallet.sendTransaction(tx);
@@ -65,6 +64,28 @@ class BlockchainService {
     } catch (error) {
       console.error('Error sending transaction:', error);
       throw new Error('Failed to send transaction');
+    }
+  }
+
+  // Add method to get some test ETH (only works on Hardhat network)
+  async getTestEther(address) {
+    try {
+      // Get a signer with test ETH (first account in Hardhat's default accounts)
+      const [signer] = await this.provider.getSigner();
+      
+      // Send 1 ETH to the specified address
+      const tx = {
+        to: address,
+        value: ethers.parseEther("1.0")
+      };
+      
+      const transaction = await signer.sendTransaction(tx);
+      await transaction.wait();
+      
+      return true;
+    } catch (error) {
+      console.error('Error getting test ETH:', error);
+      throw new Error('Failed to get test ETH');
     }
   }
 }
