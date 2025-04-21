@@ -4,6 +4,7 @@ export interface Wallet {
   name?: string;
   balance?: string;
   network?: string;
+  currency?: string;
   isConnected: boolean;
 }
 

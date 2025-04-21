@@ -1,6 +1,8 @@
-import React, { createContext, useReducer, useContext, ReactNode, useEffect } from 'react';
-import { WalletState, Wallet, AddWalletParams } from '../types/wallet.types';
+import { AddWalletParams, Wallet, WalletState } from '../types/wallet.types';
+import React, { ReactNode, createContext, useContext, useEffect, useReducer } from 'react';
+
 import { useAuth } from './AuthContext';
+import { walletAPI } from '../services/api';
 
 // Initial state
 const initialState: WalletState = {
@@ -29,13 +31,13 @@ const walletReducer = (state: WalletState, action: WalletAction): WalletState =>
       return { ...state, isConnecting: true, error: null };
     case 'CONNECT_WALLET_SUCCESS':
       // Check if wallet already exists
-      if (state.wallets.some(wallet => wallet.address === action.payload.address)) {
+      if (state.wallets.some(wallet => wallet.id === action.payload.id)) {
         return {
           ...state,
           isConnecting: false,
           activeWallet: action.payload,
           wallets: state.wallets.map(wallet => 
-            wallet.address === action.payload.address 
+            wallet.id === action.payload.id 
               ? { ...wallet, isConnected: true }
               : wallet
           ),
@@ -56,7 +58,7 @@ const walletReducer = (state: WalletState, action: WalletAction): WalletState =>
       };
     case 'ADD_WALLET':
       // Prevent duplicates
-      if (state.wallets.some(wallet => wallet.address === action.payload.address)) {
+      if (state.wallets.some(wallet => wallet.id === action.payload.id)) {
         return state;
       }
       return {
@@ -98,7 +100,7 @@ const walletReducer = (state: WalletState, action: WalletAction): WalletState =>
 
 // Context
 interface WalletContextType extends WalletState {
-  connectMetaMask: () => Promise<void>;
+  connectWallet: (currency: string) => Promise<void>;
   addWallet: (params: AddWalletParams) => void;
   removeWallet: (id: string) => void;
   setActiveWallet: (wallet: Wallet | null) => void;
@@ -115,90 +117,82 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(walletReducer, initialState);
   const { isAuthenticated, user } = useAuth();
 
-  // Load wallets from localStorage when user is authenticated
+  // Load wallets from API when user is authenticated
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const storedWallets = localStorage.getItem(`wallets_${user.id}`);
-      if (storedWallets) {
+    const loadWallets = async () => {
+      if (isAuthenticated && user) {
         try {
-          const wallets = JSON.parse(storedWallets);
-          dispatch({ type: 'LOAD_WALLETS', payload: wallets });
+          const wallets = await walletAPI.getWallets(user.id);
+          
+          // Transform API wallets to match our Wallet type
+          const transformedWallets: Wallet[] = wallets.map((wallet: any) => ({
+            id: wallet.id.toString(),
+            address: wallet.id.toString(), // Using wallet ID as address
+            name: `${wallet.currency} Wallet`,
+            balance: wallet.balance.toString(),
+            currency: wallet.currency,
+            isConnected: true,
+          }));
+          
+          dispatch({ type: 'LOAD_WALLETS', payload: transformedWallets });
+          
+          // Set the first wallet as active if there are any
+          if (transformedWallets.length > 0 && !state.activeWallet) {
+            dispatch({ type: 'SET_ACTIVE_WALLET', payload: transformedWallets[0] });
+          }
         } catch (error) {
-          console.error('Failed to parse wallets from localStorage', error);
+          console.error('Failed to load wallets from API', error);
         }
+      } else {
+        dispatch({ type: 'RESET_WALLETS' });
       }
-    } else {
-      dispatch({ type: 'RESET_WALLETS' });
-    }
+    };
+
+    loadWallets();
   }, [isAuthenticated, user]);
 
-  // Save wallets to localStorage when they change
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      localStorage.setItem(`wallets_${user.id}`, JSON.stringify(state.wallets));
+  // Connect wallet (create a new wallet in the backend)
+  const connectWallet = async (currency: string) => {
+    if (!isAuthenticated || !user) {
+      throw new Error('Vous devez être connecté pour ajouter un portefeuille');
     }
-  }, [state.wallets, isAuthenticated, user]);
 
-  // Connect MetaMask wallet
-  const connectMetaMask = async () => {
     dispatch({ type: 'CONNECT_WALLET_REQUEST' });
     try {
-      // Check if MetaMask is installed
-      if (typeof window.ethereum === 'undefined') {
-        throw new Error('MetaMask n\'est pas installé');
-      }
-
-      // Request account access
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const address = accounts[0];
-
-      if (!address) {
-        throw new Error('Aucun compte MetaMask trouvé');
-      }
-
-      // Get network information
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-      const networkName = getNetworkName(chainId);
-
-      // Get balance
-      const balance = await window.ethereum.request({
-        method: 'eth_getBalance',
-        params: [address, 'latest'],
-      });
+      // Create a new wallet in the backend
+      const newWallet = await walletAPI.createWallet(user.id, currency);
       
-      const balanceInEth = (parseInt(balance, 16) / 1e18).toFixed(4);
-
-      const newWallet: Wallet = {
-        id: `metamask-${address}`,
-        address,
-        name: 'MetaMask',
-        balance: balanceInEth,
-        network: networkName,
+      // Transform API wallet to match our Wallet type
+      const wallet: Wallet = {
+        id: newWallet.id.toString(),
+        address: newWallet.id.toString(), // Using wallet ID as address
+        name: `${currency} Wallet`,
+        balance: newWallet.balance.toString(),
+        currency: currency,
         isConnected: true,
       };
-
-      dispatch({ type: 'CONNECT_WALLET_SUCCESS', payload: newWallet });
+      
+      dispatch({ type: 'CONNECT_WALLET_SUCCESS', payload: wallet });
     } catch (error) {
       dispatch({ 
         type: 'CONNECT_WALLET_FAILURE', 
-        payload: error instanceof Error ? error.message : 'Erreur de connexion au portefeuille' 
+        payload: error instanceof Error ? error.message : 'Erreur de connexion du portefeuille' 
       });
     }
   };
 
-  // Add a wallet manually
+  // Add wallet (for manual addition)
   const addWallet = (params: AddWalletParams) => {
-    const newWallet: Wallet = {
-      id: `wallet-${Date.now()}`,
+    const wallet: Wallet = {
+      id: Date.now().toString(),
       address: params.address,
       name: params.name,
-      isConnected: false,
+      isConnected: true,
     };
-    
-    dispatch({ type: 'ADD_WALLET', payload: newWallet });
+    dispatch({ type: 'ADD_WALLET', payload: wallet });
   };
 
-  // Remove a wallet
+  // Remove wallet
   const removeWallet = (id: string) => {
     dispatch({ type: 'REMOVE_WALLET', payload: id });
   };
@@ -208,45 +202,20 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     dispatch({ type: 'SET_ACTIVE_WALLET', payload: wallet });
   };
 
-  const value = {
-    ...state,
-    connectMetaMask,
-    addWallet,
-    removeWallet,
-    setActiveWallet,
-  };
-
-  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
+  return (
+    <WalletContext.Provider
+      value={{
+        ...state,
+        connectWallet,
+        addWallet,
+        removeWallet,
+        setActiveWallet,
+      }}
+    >
+      {children}
+    </WalletContext.Provider>
+  );
 };
-
-// Helper function to get network name from chainId
-const getNetworkName = (chainId: string): string => {
-  switch (chainId) {
-    case '0x1':
-      return 'Ethereum Mainnet';
-    case '0x3':
-      return 'Ropsten';
-    case '0x4':
-      return 'Rinkeby';
-    case '0x5':
-      return 'Goerli';
-    case '0xaa36a7':
-      return 'Sepolia';
-    case '0x89':
-      return 'Polygon';
-    case '0x38':
-      return 'Binance Smart Chain';
-    default:
-      return `Réseau ${chainId}`;
-  }
-};
-
-// Add ethereum to window type
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
 
 // Custom hook to use the wallet context
 export const useWallet = () => {
