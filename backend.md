@@ -9,15 +9,21 @@
 
 2. Create the database and set up sample data:
 ```bash
-# Connect to MySQL (if you haven't set a password yet)
-# For Windows: Use MySQL Command Line Client or run:
-mysql -u root -p
+# Connect to MySQL
+# For Windows: 
+# Option 1: Use MySQL Command Line Client from Start menu
+# Option 2: Use MySQL Workbench (if installed)
+# Option 3: If 'mysql' command is not available, you can:
+#   a. Install MySQL Shell from the official MySQL website
+#   b. Add MySQL bin directory to your PATH (typically C:\Program Files\MySQL\MySQL Server 8.0\bin)
+#   c. Use the full path to mysql.exe: "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root
+
 # For macOS/Linux:
 mysql -u root
 
 # Once connected, run these commands:
-CREATE DATABASE IF NOT EXISTS crypto_management;
-USE crypto_management;
+CREATE DATABASE IF NOT EXISTS crypto_demo;
+USE crypto_demo;
 
 # Create the necessary tables
 CREATE TABLE users (
@@ -72,12 +78,16 @@ INSERT INTO transactions (wallet_id, type, amount) VALUES
 
 1. Create a `.env` file in the `project\backend` directory (Windows) or `project/backend` (macOS/Linux) with these variables:
 ```env
-PORT=5000
-DB_HOST=localhost
+PORT=3001
+DB_HOST=127.0.0.1
 DB_USER=root
 DB_PASSWORD=your_mysql_password
-DB_NAME=crypto_management
-JWT_SECRET=your_jwt_secret
+DB_NAME=crypto_demo
+JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRES_IN=24h
+NODE_ENV=development
+RATE_LIMIT_WINDOW=15
+RATE_LIMIT_MAX=100
 ```
 
 2. Install dependencies:
@@ -102,7 +112,7 @@ npm run dev
 npm run dev
 ```
 
-2. The server will start on http://localhost:5000
+2. The server will start on http://localhost:3001
 
 ## API Endpoints
 
@@ -125,16 +135,21 @@ npm run dev
 ## Troubleshooting
 
 1. Database Connection Issues:
-   - For Windows: Check Services (services.msc) to ensure MySQL is running
+   - For Windows: 
+     - Check Services (services.msc) to ensure MySQL is running
+     - If 'mysql' command is not available, use MySQL Workbench or MySQL Command Line Client from Start menu
+     - If using XAMPP, ensure MySQL service is started from XAMPP Control Panel
    - For macOS/Linux: Use `brew services list` or `sudo service mysql status`
    - Check your database credentials in .env
    - Ensure the database exists
-   - If using XAMPP, ensure MySQL service is started from XAMPP Control Panel
+   - **IMPORTANT**: Make sure the database name in your .env file matches the database you created
+   - If you get "Unknown column 'password' in 'field list'" error, ensure the users table has a password column
+   - **IMPORTANT**: Use `127.0.0.1` instead of `localhost` in your DB_HOST to avoid IPv6 connection issues
 
 2. Server Issues:
-   - Check if port 5000 is available
-   - For Windows: Use `netstat -ano | findstr :5000` to check port usage
-   - For macOS/Linux: Use `lsof -i :5000` to check port usage
+   - Check if port 3001 is available
+   - For Windows: Use `netstat -ano | findstr :3001` to check port usage
+   - For macOS/Linux: Use `lsof -i :3001` to check port usage
    - Verify all dependencies are installed
    - Check for any error messages in the console
 
@@ -142,4 +157,28 @@ npm run dev
    - Ensure you're using the correct HTTP methods
    - Verify your authentication token is valid
    - Check the request payload format
-   - For Windows: If using PowerShell, ensure you're using the correct line endings (CRLF) 
+   - For Windows: If using PowerShell, ensure you're using the correct line endings (CRLF)
+
+## Common Issues and Solutions
+
+1. **"Unknown column 'password' in 'field list'" error**:
+   - This error occurs when the users table doesn't have a password column
+   - Solution: Add the password column to the users table:
+     ```sql
+     ALTER TABLE crypto_demo.users ADD COLUMN password VARCHAR(255) AFTER email;
+     ```
+
+2. **Database name mismatch**:
+   - If you created a database named `crypto_management` but your .env file specifies `crypto_demo`, you'll get connection errors
+   - Solution: Either rename your database or update your .env file to match the database name
+
+3. **Port already in use**:
+   - If you get an error that port 3001 is already in use, you can either:
+     - Kill the process using that port
+     - Change the port in your .env file to a different value (e.g., 3002)
+
+4. **ECONNREFUSED error (IPv6 connection issue)**:
+   - If you see an error like `Error: connect ECONNREFUSED ::1:3306`, this is an IPv6 connection issue
+   - Solution: Change your DB_HOST in .env from `localhost` to `127.0.0.1` (IPv4 address)
+   - This forces the connection to use IPv4 instead of IPv6
+   - Alternatively, you can configure MySQL to accept IPv6 connections by editing your MySQL configuration file 
