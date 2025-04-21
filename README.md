@@ -1,6 +1,6 @@
 # Crypto Management System
 
-A comprehensive cryptocurrency management system built with React, Node.js, and blockchain integration.
+A comprehensive cryptocurrency management system built with React, Node.js, and blockchain integration using Hardhat and Web3.js.
 
 ## Prerequisites
 
@@ -31,6 +31,12 @@ cd project
 npm install
 ```
 
+4. Install blockchain development dependencies:
+```bash
+npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
+npm install ethers@^5.7.2 web3@^1.9.0
+```
+
 ## Environment Setup
 
 1. Create a `.env` file in the `project/backend` directory with the following variables:
@@ -41,11 +47,49 @@ DB_USER=your_mysql_username
 DB_PASSWORD=your_mysql_password
 DB_NAME=crypto_management
 JWT_SECRET=your_jwt_secret
+ALCHEMY_API_KEY=your_alchemy_api_key
 ```
 
 2. Create a `.env` file in the `project` directory (frontend) with:
 ```env
 VITE_API_URL=http://localhost:5000
+VITE_ALCHEMY_API_KEY=your_alchemy_api_key
+```
+
+## Blockchain Development Setup
+
+1. Create a Hardhat configuration file (`hardhat.config.js`):
+```javascript
+require("@nomicfoundation/hardhat-toolbox");
+require('dotenv').config();
+
+module.exports = {
+  solidity: "0.8.19",
+  networks: {
+    hardhat: {},
+    sepolia: {
+      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      accounts: [process.env.PRIVATE_KEY]
+    }
+  }
+};
+```
+
+2. Initialize Hardhat:
+```bash
+npx hardhat init
+```
+
+3. Create your smart contracts in the `contracts/` directory
+
+4. Compile contracts:
+```bash
+npx hardhat compile
+```
+
+5. Run tests:
+```bash
+npx hardhat test
 ```
 
 ## Database Setup
@@ -96,7 +140,8 @@ project/
 - Two-factor authentication
 - Wallet management
 - Transaction history
-- Real-time cryptocurrency tracking
+- Smart contract integration
+- Local blockchain development and testing
 - Secure API endpoints
 
 ## Troubleshooting
