@@ -8,7 +8,7 @@ Before you begin, ensure you have the following installed:
 - [Node.js](https://nodejs.org/) (v18 or higher)
 - [Git](https://git-scm.com/download/win)
 - [Visual Studio Code](https://code.visualstudio.com/) (recommended)
-- [PostgreSQL](https://www.postgresql.org/download/windows/)
+- [MySQL](https://dev.mysql.com/downloads/installer/) (v8.0 or higher)
 
 ## Installation
 
@@ -37,8 +37,8 @@ npm install
 ```env
 PORT=5000
 DB_HOST=localhost
-DB_USER=your_postgres_username
-DB_PASSWORD=your_postgres_password
+DB_USER=your_mysql_username
+DB_PASSWORD=your_mysql_password
 DB_NAME=crypto_management
 JWT_SECRET=your_jwt_secret
 ```
@@ -50,7 +50,7 @@ VITE_API_URL=http://localhost:5000
 
 ## Database Setup
 
-1. Open PostgreSQL command prompt (psql)
+1. Open MySQL command line client or MySQL Workbench
 2. Create the database:
 ```sql
 CREATE DATABASE crypto_management;
@@ -104,7 +104,7 @@ project/
 If you encounter any issues:
 
 1. Make sure all dependencies are installed correctly
-2. Verify that PostgreSQL is running
+2. Verify that MySQL server is running
 3. Check that all environment variables are set correctly
 4. Ensure ports 5000 and 5173 are not in use by other applications
 
