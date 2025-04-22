@@ -1,5 +1,5 @@
 import { AlertCircle, Send } from 'lucide-react';
-import React, { FC, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 
 import { useTransaction } from '../../context/TransactionContext';
 import { useWallet } from '../../context/WalletContext';
@@ -14,38 +14,78 @@ const TransactionForm: FC = () => {
   const [transactionSuccess, setTransactionSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Log active wallet when component mounts or when it changes
+  useEffect(() => {
+    console.log('[TransactionForm] Active wallet updated:', activeWallet ? {
+      id: activeWallet.id,
+      name: activeWallet.name,
+      address: activeWallet.address,
+      isConnected: activeWallet.isConnected
+    } : 'No active wallet');
+  }, [activeWallet]);
+
   const validateForm = () => {
+    console.log('[TransactionForm] Validating form with values:', {
+      toAddress,
+      amount
+    });
+    
     const errors: { toAddress?: string; amount?: string } = {};
     
     if (!toAddress) {
       errors.toAddress = 'L\'adresse du destinataire est requise';
+      console.log('[TransactionForm] Validation error: Missing recipient address');
     } else if (!/^0x[a-fA-F0-9]{40}$/.test(toAddress)) {
       errors.toAddress = 'Format d\'adresse Ethereum invalide';
+      console.log('[TransactionForm] Validation error: Invalid Ethereum address format');
     }
     
     if (!amount) {
       errors.amount = 'Le montant est requis';
+      console.log('[TransactionForm] Validation error: Missing amount');
     } else if (isNaN(Number(amount)) || Number(amount) <= 0) {
       errors.amount = 'Veuillez entrer un montant valide';
+      console.log('[TransactionForm] Validation error: Invalid amount');
     }
     
     setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    const isValid = Object.keys(errors).length === 0;
+    console.log('[TransactionForm] Form validation result:', isValid);
+    return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[TransactionForm] Submit button clicked');
     
     if (!activeWallet) {
+      console.log('[TransactionForm] No active wallet selected');
       setErrorMessage('Please select a wallet first');
       return;
     }
     
+    console.log('[TransactionForm] Active wallet:', {
+      id: activeWallet.id,
+      name: activeWallet.name,
+      address: activeWallet.address
+    });
+    
     if (!validateForm()) {
+      console.log('[TransactionForm] Form validation failed');
       return;
     }
     
     try {
+      // Check if we have the private key for this wallet
+      const privateKey = localStorage.getItem(`wallet_private_key_${activeWallet.id}`);
+      console.log('[TransactionForm] Private key found:', !!privateKey);
+      
+      if (!privateKey) {
+        console.log('[TransactionForm] Private key not found for wallet');
+        setErrorMessage(`Private key not found for wallet ${activeWallet.name || activeWallet.address}. Please re-import the wallet with its private key or select a different wallet.`);
+        return;
+      }
+      
       const transactionData = {
         wallet_id: activeWallet.id,
         type: 'SEND' as const,
@@ -56,6 +96,7 @@ const TransactionForm: FC = () => {
       console.log('[TransactionForm] Creating transaction:', transactionData);
       
       await createTransaction(transactionData);
+      console.log('[TransactionForm] Transaction created successfully');
       
       // Reset form
       setAmount('');
@@ -147,6 +188,7 @@ const TransactionForm: FC = () => {
         <button
           type="submit"
           disabled={isLoading || !activeWallet}
+          onClick={() => console.log('[TransactionForm] Button clicked, form will submit')}
           className="w-full flex justify-center items-center py-3 px-4 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-md transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {isLoading ? (

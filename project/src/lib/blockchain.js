@@ -164,4 +164,4 @@ class BlockchainService {
   }
 }
 
-export const blockchainService = new BlockchainService(); 
+export default new BlockchainService(); 

@@ -2,8 +2,9 @@ import { AlertCircle, Plus, Terminal, Wallet } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 import { Link } from 'react-router-dom';
-import { blockchainService } from '../../lib/blockchain';
+import blockchainService from '../../lib/blockchain';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useWallet } from '../../context/WalletContext';
 
 const ConnectWallet: React.FC = () => {

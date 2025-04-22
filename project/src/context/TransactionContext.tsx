@@ -62,6 +62,8 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [transactions, isLoading, error, activeWallet]);
 
   const createTransaction = async (transaction: CreateTransactionDTO) => {
+    console.log('[TransactionContext] createTransaction called with:', transaction);
+    
     if (!activeWallet) {
       console.error('[TransactionContext] No active wallet selected');
       setError('No active wallet selected');
@@ -102,7 +104,20 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         try {
           // First send the ETH transaction
           console.log('[TransactionContext] Calling blockchain service to send ETH...');
-          const result = await sendETH(transaction.to_address, transaction.amount);
+          
+          // Retrieve private key from localStorage
+          const privateKey = localStorage.getItem(`wallet_private_key_${activeWallet.id}`);
+          if (!privateKey) {
+            console.error('[TransactionContext] Private key not found for wallet:', activeWallet.id);
+            throw new Error(`Private key not found for wallet ${activeWallet.name || activeWallet.address}. Please re-import the wallet with its private key.`);
+          }
+          
+          console.log('[TransactionContext] Private key found, sending ETH...');
+          const result = await sendETH(
+            transaction.to_address, 
+            transaction.amount,
+            privateKey
+          );
           console.log('[TransactionContext] ETH transaction result:', result);
           
           // Then create the transaction record in the backend
@@ -153,6 +168,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         stack: err instanceof Error ? err.stack : undefined
       });
       setError(err instanceof Error ? err.message : 'An error occurred while creating the transaction');
+      throw err; // Re-throw the error so it can be caught by the component
     } finally {
       setIsLoading(false);
     }

@@ -6,19 +6,27 @@ const getProvider = () => {
   return new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
 };
 
-// Get signer from private key (using the first account from Hardhat)
-const getSigner = async () => {
+// Get signer from private key
+const getSigner = async (privateKey: string) => {
   console.log('[BlockchainService] Getting signer from private key');
   const provider = getProvider();
-  // Hardhat's first account private key
-  const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-  const signer = new ethers.Wallet(privateKey, provider);
-  const address = await signer.getAddress();
-  console.log('[BlockchainService] Signer address:', address);
-  return signer;
+  
+  if (!privateKey) {
+    throw new Error('Private key is required to send transactions');
+  }
+  
+  try {
+    const signer = new ethers.Wallet(privateKey, provider);
+    const address = await signer.getAddress();
+    console.log('[BlockchainService] Signer address:', address);
+    return signer;
+  } catch (error) {
+    console.error('[BlockchainService] Error creating signer:', error);
+    throw new Error('Invalid private key provided');
+  }
 };
 
-export const sendETH = async (toAddress: string, amount: string) => {
+export const sendETH = async (toAddress: string, amount: string, fromPrivateKey: string) => {
   console.log('[BlockchainService] Sending ETH transaction:', {
     toAddress,
     amount,
@@ -26,7 +34,7 @@ export const sendETH = async (toAddress: string, amount: string) => {
   });
   
   try {
-    const signer = await getSigner();
+    const signer = await getSigner(fromPrivateKey);
     const fromAddress = await signer.getAddress();
     console.log('[BlockchainService] Transaction details:', {
       fromAddress,

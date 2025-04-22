@@ -1,7 +1,7 @@
 import { AddWalletParams, Wallet, WalletState } from '../types/wallet.types';
-import React, { ReactNode, createContext, useContext, useEffect, useReducer } from 'react';
+import React, { ReactNode, createContext, useCallback, useContext, useEffect, useReducer } from 'react';
 
-import { blockchainService } from '../lib/blockchain';
+import blockchainService from '../lib/blockchain';
 import { useAuth } from './AuthContext';
 import { walletAPI } from '../services/api';
 
@@ -13,7 +13,7 @@ const initialState: WalletState = {
   error: null,
 };
 
-// Action types
+// Define action types
 type WalletAction =
   | { type: 'CONNECT_WALLET_REQUEST' }
   | { type: 'CONNECT_WALLET_SUCCESS'; payload: Wallet }
@@ -23,7 +23,9 @@ type WalletAction =
   | { type: 'SET_ACTIVE_WALLET'; payload: Wallet | null }
   | { type: 'UPDATE_WALLET'; payload: Wallet }
   | { type: 'LOAD_WALLETS'; payload: Wallet[] }
-  | { type: 'RESET_WALLETS' };
+  | { type: 'RESET_WALLETS' }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_WALLETS'; payload: Wallet[] };
 
 // Reducer
 const walletReducer = (state: WalletState, action: WalletAction): WalletState => {
@@ -94,6 +96,10 @@ const walletReducer = (state: WalletState, action: WalletAction): WalletState =>
       };
     case 'RESET_WALLETS':
       return initialState;
+    case 'SET_LOADING':
+      return { ...state, isConnecting: action.payload };
+    case 'SET_WALLETS':
+      return { ...state, wallets: action.payload };
     default:
       return state;
   }
@@ -119,45 +125,85 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(walletReducer, initialState);
   const { isAuthenticated, user } = useAuth();
 
-  // Load wallets from API when user is authenticated
+  // Load wallets when component mounts or auth state changes
   useEffect(() => {
-    const loadWallets = async () => {
-      if (isAuthenticated && user) {
-        console.log('[WalletContext] Loading wallets for authenticated user:', {
-          userId: user.id,
-          isAuthenticated
-        });
-        try {
-          const wallets = await walletAPI.getWallets(user.id);
-          console.log('[WalletContext] Wallets loaded from API:', {
-            count: wallets.length,
-            wallets: wallets.map((w: Wallet) => ({
-              ...w,
-              encrypted_private_key: '***' // Hide private key in logs
-            }))
-          });
-          
-          dispatch({ type: 'LOAD_WALLETS', payload: wallets });
-          
-          // Set the first wallet as active if there are any
-          if (wallets.length > 0 && !state.activeWallet) {
-            console.log('[WalletContext] Setting first wallet as active:', {
-              id: wallets[0].id,
-              address: wallets[0].address
-            });
-            dispatch({ type: 'SET_ACTIVE_WALLET', payload: wallets[0] });
-          }
-        } catch (error) {
-          console.error('[WalletContext] Failed to load wallets:', error);
-        }
-      } else {
-        console.log('[WalletContext] User not authenticated, resetting wallets');
-        dispatch({ type: 'RESET_WALLETS' });
-      }
-    };
-
-    loadWallets();
+    if (isAuthenticated && user) {
+      console.log('[WalletContext] User authenticated, loading wallets...');
+      loadWallets();
+    } else {
+      console.log('[WalletContext] User not authenticated, resetting wallets');
+      dispatch({ type: 'RESET_WALLETS' });
+    }
   }, [isAuthenticated, user]);
+
+  // Load wallets from backend
+  const loadWallets = async () => {
+    console.log('[WalletContext] Starting to load wallets');
+    
+    if (!isAuthenticated || !user) {
+      console.error('[WalletContext] Cannot load wallets: User not authenticated');
+      return;
+    }
+
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      
+      console.log('[WalletContext] Fetching wallets from backend for user:', user.id);
+      const wallets = await walletAPI.getWallets(user.id);
+      console.log('[WalletContext] Fetched wallets from backend:', wallets);
+      
+      // Store private keys in localStorage for each wallet
+      wallets.forEach((wallet: any) => {
+        if (wallet.encrypted_private_key) {
+          localStorage.setItem(`wallet_private_key_${wallet.id}`, wallet.encrypted_private_key);
+        }
+      });
+      
+      // Fetch balances for each wallet
+      const walletsWithBalances = await Promise.all(
+        wallets.map(async (wallet: Wallet) => {
+          try {
+            // Get balance from blockchain
+            const balance = await blockchainService.getBalance(wallet.address);
+            
+            return {
+              ...wallet,
+              balance: balance.toString(),
+              isConnected: true
+            };
+          } catch (error) {
+            console.error(`[WalletContext] Error fetching balance for wallet ${wallet.address}:`, error);
+            return {
+              ...wallet,
+              balance: '0',
+              isConnected: false
+            };
+          }
+        })
+      );
+      
+      console.log('[WalletContext] Wallets with balances:', walletsWithBalances);
+      
+      // Update state with wallets
+      dispatch({ type: 'SET_WALLETS', payload: walletsWithBalances });
+      
+      // Set active wallet if none is selected
+      if (!state.activeWallet && walletsWithBalances.length > 0) {
+        console.log('[WalletContext] Setting first wallet as active (no active wallet)');
+        dispatch({ type: 'SET_ACTIVE_WALLET', payload: walletsWithBalances[0] });
+      }
+      
+      console.log('[WalletContext] Wallet loading completed successfully');
+    } catch (error) {
+      console.error('[WalletContext] Error loading wallets:', error);
+      console.error('[WalletContext] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
 
   // Update balances periodically
   useEffect(() => {
@@ -235,6 +281,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
             console.log(`[WalletContext] Manually fetching balance for wallet ${wallet.address}...`);
             const balance = await blockchainService.getBalance(wallet.address);
             console.log(`[WalletContext] Updated balance for ${wallet.address}: ${balance} ${wallet.currency}`);
+            
+            // Always return the updated wallet with the new balance
             return { ...wallet, balance };
           } catch (error) {
             console.error(`[WalletContext] Failed to update balance for wallet ${wallet.address}:`, error);
@@ -243,17 +291,20 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         })
       );
 
+      // Always dispatch the updated wallets to ensure state is refreshed
+      console.log('[WalletContext] Dispatching updated wallets to state');
       dispatch({ type: 'LOAD_WALLETS', payload: updatedWallets });
       
-      // Update active wallet if it changed
+      // Update active wallet if it exists
       if (state.activeWallet) {
         const updatedActiveWallet = updatedWallets.find(w => w.id === state.activeWallet?.id);
         if (updatedActiveWallet) {
+          console.log(`[WalletContext] Updating active wallet balance: ${state.activeWallet.balance} -> ${updatedActiveWallet.balance}`);
           dispatch({ type: 'SET_ACTIVE_WALLET', payload: updatedActiveWallet });
         }
       }
     } catch (error) {
-      console.error('[WalletContext] Failed to refresh wallet balances:', error);
+      console.error('[WalletContext] Failed to refresh balances:', error);
     }
   };
 
@@ -377,38 +428,36 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         currency: savedWallet.currency
       });
       
-      const wallet: Wallet = {
-        id: savedWallet.id,
-        address: savedWallet.address,
-        privateKey: params.privateKey,
-        name: params.name,
-        balance: balance,
-        currency: savedWallet.currency,
-        isConnected: true,
-      };
-
-      console.log('[WalletContext] Adding wallet to state:', {
-        id: wallet.id,
-        name: wallet.name,
-        address: wallet.address,
-        balance: wallet.balance,
-        currency: wallet.currency
-      });
-
-      dispatch({ type: 'ADD_WALLET', payload: wallet });
-      
-      // Set as active wallet if no other wallet is active
-      if (!state.activeWallet) {
-        console.log('[WalletContext] Setting as active wallet (no active wallet)');
-        dispatch({ type: 'SET_ACTIVE_WALLET', payload: wallet });
+      // Store the private key in localStorage for this wallet
+      if (params.privateKey) {
+        console.log('[WalletContext] Storing private key in localStorage for wallet:', savedWallet.id);
+        localStorage.setItem(`wallet_private_key_${savedWallet.id}`, params.privateKey);
       }
-
-      console.log('[WalletContext] Wallet addition completed successfully');
-    } catch (error: any) {
-      console.error('[WalletContext] Error adding wallet:', error);
+      
+      // Add wallet to state
+      const newWallet: Wallet = {
+        id: savedWallet.id,
+        name: params.name,
+        address: savedWallet.address,
+        balance: balance.toString(),
+        currency: savedWallet.currency,
+        isConnected: true
+      };
+      
+      dispatch({ type: 'ADD_WALLET', payload: newWallet });
+      
+      // Set as active wallet if it's the first one
+      if (state.wallets.length === 0) {
+        console.log('[WalletContext] Setting new wallet as active (first wallet)');
+        dispatch({ type: 'SET_ACTIVE_WALLET', payload: newWallet });
+      }
+      
+      return newWallet;
+    } catch (error) {
+      console.error('[WalletContext] Failed to add wallet:', error);
       console.error('[WalletContext] Error details:', {
-        message: error?.message,
-        stack: error?.stack
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
       });
       throw error;
     }

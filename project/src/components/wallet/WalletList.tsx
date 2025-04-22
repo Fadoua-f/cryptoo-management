@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 
 import { AddWalletParams } from '../../types/wallet.types';
 import { Link } from 'react-router-dom';
-import { blockchainService } from '../../lib/blockchain';
+import blockchainService from '../../lib/blockchain';
 import { useAuth } from '../../context/AuthContext';
 import { useWallet } from '../../context/WalletContext';
 
