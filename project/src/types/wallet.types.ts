@@ -17,6 +17,6 @@ export interface WalletState {
 
 export interface AddWalletParams {
   name: string;
-  privateKey: string;
+  privateKey?: string;
   currency?: string;
 }
