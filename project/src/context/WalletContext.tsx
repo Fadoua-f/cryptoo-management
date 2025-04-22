@@ -349,8 +349,20 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   };
 
   // Remove wallet
-  const removeWallet = (id: string) => {
-    dispatch({ type: 'REMOVE_WALLET', payload: id });
+  const removeWallet = async (id: string) => {
+    console.log('[WalletContext] Removing wallet:', { id });
+    try {
+      await walletAPI.deleteWallet(id);
+      console.log('[WalletContext] Wallet deleted from backend, updating state');
+      dispatch({ type: 'REMOVE_WALLET', payload: id });
+    } catch (error: any) {
+      console.error('[WalletContext] Error deleting wallet:', error);
+      console.error('[WalletContext] Error details:', {
+        message: error?.message,
+        stack: error?.stack
+      });
+      throw error;
+    }
   };
 
   // Set active wallet

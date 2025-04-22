@@ -1,5 +1,5 @@
 import { CreateTransactionDTO, Transaction, TransactionContextType } from '../types/transaction';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 import { sendETH } from '../services/blockchain';
 import { transactionAPI } from '../services/api';
@@ -13,32 +13,68 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [error, setError] = useState<string | null>(null);
   const { activeWallet } = useWallet();
 
+  const loadTransactions = useCallback(async (walletId: string) => {
+    console.log('[TransactionContext] Loading transactions for wallet:', walletId);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await transactionAPI.getTransactions(walletId);
+      console.log('[TransactionContext] Received transactions:', {
+        count: response.length,
+        transactions: response.map((tx: Transaction) => ({
+          id: tx.id,
+          type: tx.type,
+          amount: tx.amount,
+          status: tx.status
+        }))
+      });
+      setTransactions(response);
+    } catch (err) {
+      const error = err as Error;
+      console.error('[TransactionContext] Error loading transactions:', {
+        error: error.message,
+        stack: error.stack
+      });
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // Load transactions when active wallet changes
   useEffect(() => {
-    const loadTransactions = async () => {
-      if (activeWallet) {
-        setIsLoading(true);
-        try {
-          const apiTransactions = await transactionAPI.getTransactions(activeWallet.id);
-          setTransactions(apiTransactions);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to load transactions');
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setTransactions([]);
-      }
-    };
+    if (activeWallet) {
+      loadTransactions(activeWallet.id);
+    } else {
+      console.log('[TransactionContext] No active wallet, clearing transactions');
+      setTransactions([]);
+    }
+  }, [activeWallet, loadTransactions]);
 
-    loadTransactions();
-  }, [activeWallet]);
+  // Debug effect to log state changes
+  useEffect(() => {
+    console.log('[TransactionContext] State updated:', {
+      transactionsCount: transactions.length,
+      isLoading,
+      error,
+      activeWalletId: activeWallet?.id
+    });
+  }, [transactions, isLoading, error, activeWallet]);
 
   const createTransaction = async (transaction: CreateTransactionDTO) => {
     if (!activeWallet) {
+      console.error('[TransactionContext] No active wallet selected');
       setError('No active wallet selected');
       return;
     }
+
+    console.log('[TransactionContext] Creating transaction:', {
+      walletId: activeWallet.id,
+      type: transaction.type,
+      amount: transaction.amount,
+      toAddress: transaction.to_address,
+      timestamp: new Date().toISOString()
+    });
 
     setIsLoading(true);
     setError(null);
@@ -50,32 +86,64 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         amount: transaction.amount.toString()
       };
 
-      // If it's an ETH transfer, use the blockchain service first
-      if (transaction.to_address) {
-        console.log('Sending ETH transaction:', {
+      console.log('[TransactionContext] Transaction data:', transactionData);
+      console.log('[TransactionContext] Transaction type:', transaction.type);
+      console.log('[TransactionContext] Transaction to_address:', transaction.to_address);
+      console.log('[TransactionContext] Condition check:', transaction.type === 'SEND' && transaction.to_address);
+
+      // If it's a SEND transaction with a to_address, use the blockchain service first
+      if (transaction.type === 'SEND' && transaction.to_address) {
+        console.log('[TransactionContext] Sending ETH transaction:', {
           toAddress: transaction.to_address,
-          amount: transaction.amount
+          amount: transaction.amount,
+          fromWallet: activeWallet.address
         });
         
         try {
           // First send the ETH transaction
+          console.log('[TransactionContext] Calling blockchain service to send ETH...');
           const result = await sendETH(transaction.to_address, transaction.amount);
-          console.log('ETH transaction result:', result);
+          console.log('[TransactionContext] ETH transaction result:', result);
           
           // Then create the transaction record in the backend
-          const apiTransaction = await transactionAPI.createTransaction(transactionData);
+          console.log('[TransactionContext] Creating transaction record in backend...');
+          const apiTransaction = await transactionAPI.createTransaction({
+            ...transactionData,
+            tx_hash: result.hash
+          });
+          console.log('[TransactionContext] Transaction record created:', {
+            id: apiTransaction.id,
+            type: apiTransaction.type,
+            amount: apiTransaction.amount,
+            status: apiTransaction.status
+          });
           setTransactions(prev => [...prev, apiTransaction]);
         } catch (blockchainError) {
-          console.error('Blockchain transaction failed:', blockchainError);
+          console.error('[TransactionContext] Blockchain transaction failed:', blockchainError);
+          console.error('[TransactionContext] Error details:', {
+            message: blockchainError instanceof Error ? blockchainError.message : 'Unknown error',
+            stack: blockchainError instanceof Error ? blockchainError.stack : undefined
+          });
           throw blockchainError;
         }
       } else {
         // Handle other transaction types through the API
+        console.log('[TransactionContext] Creating non-ETH transaction in backend...');
         const apiTransaction = await transactionAPI.createTransaction(transactionData);
+        console.log('[TransactionContext] Transaction record created:', {
+          id: apiTransaction.id,
+          type: apiTransaction.type,
+          amount: apiTransaction.amount,
+          status: apiTransaction.status
+        });
         setTransactions(prev => [...prev, apiTransaction]);
       }
     } catch (err) {
-      console.error('Transaction error:', err);
+      console.error('[TransactionContext] Transaction error:', err);
+      console.error('[TransactionContext] Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined
+      });
       setError(err instanceof Error ? err.message : 'An error occurred while creating the transaction');
     } finally {
       setIsLoading(false);

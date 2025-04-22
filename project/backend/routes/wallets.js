@@ -114,4 +114,61 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// Delete a wallet
+router.delete('/:id', async (req, res) => {
+    const walletId = req.params.id;
+    console.log(`[DELETE /wallets/${walletId}] Deleting wallet`);
+    
+    try {
+        
+        // Start a transaction
+        console.log(`[DELETE /wallets/${walletId}] Starting database transaction...`);
+        await pool.query('START TRANSACTION');
+
+        // First check if wallet exists
+        console.log(`[DELETE /wallets/${walletId}] Checking if wallet exists...`);
+        const [wallets] = await pool.query(
+            'SELECT id FROM wallets WHERE id = ?',
+            [walletId]
+        );
+        
+        if (wallets.length === 0) {
+            console.error(`[DELETE /wallets/${walletId}] Wallet not found`);
+            return res.status(404).json({ error: 'Wallet not found' });
+        }
+
+        // Delete associated transactions first (due to foreign key constraint)
+        console.log(`[DELETE /wallets/${walletId}] Deleting associated transactions...`);
+        await pool.query(
+            'DELETE FROM transactions WHERE wallet_id = ?',
+            [walletId]
+        );
+
+        // Delete the wallet
+        console.log(`[DELETE /wallets/${walletId}] Deleting wallet...`);
+        await pool.query(
+            'DELETE FROM wallets WHERE id = ?',
+            [walletId]
+        );
+
+        // Commit the transaction
+        console.log(`[DELETE /wallets/${walletId}] Committing database transaction...`);
+        await pool.query('COMMIT');
+        
+        console.log(`[DELETE /wallets/${walletId}] Wallet deleted successfully`);
+        res.json({ message: 'Wallet deleted successfully' });
+    } catch (error) {
+        // Rollback in case of error
+        console.error(`[DELETE /wallets/${walletId}] Error occurred, rolling back transaction...`);
+        await pool.query('ROLLBACK');
+        console.error(`[DELETE /wallets/${walletId}] Error deleting wallet:`, error);
+        console.error(`[DELETE /wallets/${walletId}] Error details:`, {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
+        res.status(500).json({ error: 'Failed to delete wallet' });
+    }
+});
+
 module.exports = router; 

@@ -1,10 +1,10 @@
 import { AlertCircle, Send } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 
 import { useTransaction } from '../../context/TransactionContext';
 import { useWallet } from '../../context/WalletContext';
 
-const TransactionForm: React.FC = () => {
+const TransactionForm: FC = () => {
   const { activeWallet } = useWallet();
   const { createTransaction, isLoading, error } = useTransaction();
   
@@ -12,6 +12,7 @@ const TransactionForm: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [formErrors, setFormErrors] = useState<{ toAddress?: string; amount?: string }>({});
   const [transactionSuccess, setTransactionSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const validateForm = () => {
     const errors: { toAddress?: string; amount?: string } = {};
@@ -34,48 +35,40 @@ const TransactionForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted');
-    setTransactionSuccess(false);
     
     if (!activeWallet) {
-      console.log('No active wallet');
-      setFormErrors({ 
-        toAddress: 'Veuillez d\'abord sélectionner un portefeuille' 
-      });
+      setErrorMessage('Please select a wallet first');
       return;
     }
     
-    if (validateForm()) {
-      console.log('Form validated, attempting transaction', {
-        walletId: activeWallet.id,
-        toAddress,
-        amount
-      });
-      try {
-        await createTransaction({
-          walletId: activeWallet.id,
-          type: 'sell',
-          amount: Number(amount),
-          currency: 'ETH',
-          toAddress: toAddress
-        });
-        
-        console.log('Transaction created successfully');
-        setToAddress('');
-        setAmount('');
-        setFormErrors({});
-        setTransactionSuccess(true);
-        
-        // Reset success message after 5 seconds
-        setTimeout(() => {
-          setTransactionSuccess(false);
-        }, 5000);
-      } catch (error) {
-        console.error('Transaction error:', error);
-        // Error is handled by the context
-      }
-    } else {
-      console.log('Form validation failed', formErrors);
+    if (!validateForm()) {
+      return;
+    }
+    
+    try {
+      const transactionData = {
+        wallet_id: activeWallet.id,
+        type: 'SEND' as const,
+        amount: amount,
+        to_address: toAddress
+      };
+      
+      console.log('[TransactionForm] Creating transaction:', transactionData);
+      
+      await createTransaction(transactionData);
+      
+      // Reset form
+      setAmount('');
+      setToAddress('');
+      setTransactionSuccess(true);
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setTransactionSuccess(false);
+      }, 5000);
+    } catch (error) {
+      console.error('[TransactionForm] Error creating transaction:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to create transaction');
     }
   };
 

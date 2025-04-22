@@ -81,27 +81,94 @@ export const walletAPI = {
     console.log('[walletAPI] Wallet updated successfully:', response.data);
     return response.data;
   },
+  deleteWallet: async (walletId: string) => {
+    console.log('[walletAPI] Deleting wallet:', { walletId });
+    const response = await api.delete(`/wallets/${walletId}`);
+    console.log('[walletAPI] Wallet deleted successfully:', response.data);
+    return response.data;
+  }
 };
 
 // Transaction API
 export const transactionAPI = {
   getTransactions: async (walletId: string) => {
-    const response = await api.get(`/transactions/wallet/${walletId}`);
-    return response.data;
-  },
-  createTransaction: async (data: { wallet_id: string; type: string; amount: string }) => {
+    console.log('[transactionAPI] Fetching transactions for wallet:', walletId);
     try {
-      console.log('Creating transaction in backend:', data);
+      const response = await api.get(`/transactions/wallet/${walletId}`);
+      console.log('[transactionAPI] Raw API response:', response.data);
+      
+      // Ensure all transactions have the required fields
+      const processedTransactions = response.data.map((t: any) => ({
+        id: t.id,
+        type: t.type,
+        amount: t.amount,
+        status: t.status,
+        to_address: t.to_address,
+        from_address: t.from_address,
+        tx_hash: t.tx_hash,
+        created_at: t.created_at,
+        wallet_id: t.wallet_id
+      }));
+      
+      console.log('[transactionAPI] Processed transactions:', processedTransactions);
+      console.log('[transactionAPI] Found transactions:', {
+        count: processedTransactions.length,
+        transactions: processedTransactions.map((t: any) => ({
+          id: t.id,
+          type: t.type,
+          amount: t.amount,
+          status: t.status
+        }))
+      });
+      
+      return processedTransactions;
+    } catch (error) {
+      console.error('[transactionAPI] Error fetching transactions:', error);
+      console.error('[transactionAPI] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        response: error instanceof Error && 'response' in error ? (error as any).response?.data : undefined
+      });
+      return [];
+    }
+  },
+  createTransaction: async (data: { wallet_id: string; type: string; amount: string; to_address?: string; currency?: string; tx_hash?: string; created_at?: string }) => {
+    try {
+      console.log('[transactionAPI] Creating transaction in backend:', {
+        wallet_id: data.wallet_id,
+        type: data.type,
+        amount: data.amount,
+        to_address: data.to_address,
+        currency: data.currency,
+        tx_hash: data.tx_hash,
+        timestamp: new Date().toISOString()
+      });
       
       const response = await api.post('/transactions', { 
         ...data,
-        created_at: new Date().toISOString()
+        created_at: data.created_at || new Date().toISOString()
       });
-      console.log('Transaction created in backend:', response.data);
+      
+      console.log('[transactionAPI] Transaction created in backend:', {
+        id: response.data.id,
+        wallet_id: response.data.wallet_id,
+        type: response.data.type,
+        amount: response.data.amount,
+        status: response.data.status,
+        created_at: response.data.created_at
+      });
+      
       return response.data;
     } catch (error) {
-      console.error('Error creating transaction in backend:', error);
+      console.error('[transactionAPI] Error creating transaction in backend:', error);
+      console.error('[transactionAPI] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        response: error instanceof Error && 'response' in error ? (error as any).response?.data : undefined
+      });
+      
       // If the backend is not available, return a mock transaction
+      console.log('[transactionAPI] Returning mock transaction due to backend error');
       return {
         id: Date.now().toString(),
         ...data,
