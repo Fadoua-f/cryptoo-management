@@ -6,6 +6,7 @@ class BlockchainService {
     console.log('[BlockchainService] Initializing service...');
     this.web3 = null;
     this.provider = null;
+    this.isConnected = false;
     this.initialize();
   }
 
@@ -19,31 +20,48 @@ class BlockchainService {
       this.provider = new ethers.providers.JsonRpcProvider(localUrl);
       
       // Test the connection
-      this.web3.eth.getBlockNumber()
-        .then(block => {
-          console.log('[BlockchainService] Successfully connected to network');
-          console.log('[BlockchainService] Current block number:', block);
-        })
-        .catch(err => {
-          console.error('[BlockchainService] Failed to connect to network:', err);
-          console.error('[BlockchainService] Error details:', {
-            message: err.message,
-            code: err.code,
-            data: err.data
-          });
-        });
+      this.checkConnection();
     } catch (error) {
       console.error('[BlockchainService] Failed to initialize:', error);
       console.error('[BlockchainService] Error details:', {
         message: error.message,
         stack: error.stack
       });
+      this.isConnected = false;
+    }
+  }
+
+  async checkConnection() {
+    try {
+      // Test the connection
+      const block = await this.web3.eth.getBlockNumber();
+      console.log('[BlockchainService] Successfully connected to network');
+      console.log('[BlockchainService] Current block number:', block);
+      this.isConnected = true;
+      return true;
+    } catch (err) {
+      console.error('[BlockchainService] Failed to connect to network:', err);
+      console.error('[BlockchainService] Error details:', {
+        message: err.message,
+        code: err.code,
+        data: err.data
+      });
+      this.isConnected = false;
+      return false;
     }
   }
 
   async createWallet() {
     console.log('[BlockchainService] Creating new wallet...');
     try {
+      // Check if we're connected to Hardhat
+      if (!this.isConnected) {
+        const connected = await this.checkConnection();
+        if (!connected) {
+          throw new Error('Cannot connect to Hardhat network. Please make sure Hardhat is running with "npx hardhat node"');
+        }
+      }
+
       if (!this.web3) {
         console.error('[BlockchainService] Web3 not initialized');
         throw new Error('Blockchain service not initialized');
@@ -69,7 +87,7 @@ class BlockchainService {
         message: error.message,
         stack: error.stack
       });
-      throw new Error('Failed to create wallet');
+      throw new Error(`Failed to create wallet: ${error.message}`);
     }
   }
 

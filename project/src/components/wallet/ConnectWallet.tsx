@@ -1,7 +1,8 @@
-import { AlertCircle, Plus, Wallet } from 'lucide-react';
-import React, { useState } from 'react';
+import { AlertCircle, Plus, Terminal, Wallet } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 import { Link } from 'react-router-dom';
+import { blockchainService } from '../../lib/blockchain';
 import { useAuth } from '../../context/AuthContext';
 import { useWallet } from '../../context/WalletContext';
 
@@ -9,11 +10,38 @@ const ConnectWallet: React.FC = () => {
   const { connectWallet, isConnecting, error, activeWallet } = useWallet();
   const { isAuthenticated } = useAuth();
   const [currency, setCurrency] = useState('ETH');
+  const [hardhatStatus, setHardhatStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+
+  // Check if Hardhat is running
+  useEffect(() => {
+    const checkHardhatConnection = async () => {
+      try {
+        const isConnected = await blockchainService.checkConnection();
+        setHardhatStatus(isConnected ? 'connected' : 'disconnected');
+      } catch (err) {
+        console.error('Error checking Hardhat connection:', err);
+        setHardhatStatus('disconnected');
+      }
+    };
+
+    checkHardhatConnection();
+  }, []);
 
   const handleConnectWallet = async () => {
     if (!isAuthenticated) {
       return; // Don't attempt to connect if not authenticated
     }
+    
+    if (hardhatStatus !== 'connected') {
+      // Try to reconnect to Hardhat
+      const isConnected = await blockchainService.checkConnection();
+      setHardhatStatus(isConnected ? 'connected' : 'disconnected');
+      
+      if (!isConnected) {
+        return; // Don't proceed if Hardhat is not running
+      }
+    }
+    
     try {
       await connectWallet(currency);
     } catch (error) {
@@ -60,6 +88,24 @@ const ConnectWallet: React.FC = () => {
         </div>
       )}
       
+      {hardhatStatus === 'disconnected' && (
+        <div className="mb-4 p-4 bg-warning-50 text-warning-700 rounded-md">
+          <p className="font-medium flex items-center">
+            <Terminal size={20} className="mr-2" />
+            Hardhat n'est pas connecté
+          </p>
+          <p className="text-sm mt-1">
+            Pour créer un portefeuille local, vous devez d'abord démarrer le nœud Hardhat.
+          </p>
+          <div className="mt-2 p-2 bg-gray-100 rounded font-mono text-sm">
+            npx hardhat node
+          </div>
+          <p className="text-sm mt-2">
+            Exécutez cette commande dans un terminal séparé, puis rafraîchissez cette page.
+          </p>
+        </div>
+      )}
+      
       {activeWallet?.isConnected ? (
         <div className="p-4 bg-success-50 text-success-700 rounded-md mb-6">
           <p className="font-medium">Portefeuille connecté !</p>
@@ -99,7 +145,7 @@ const ConnectWallet: React.FC = () => {
       
       <button
         onClick={handleConnectWallet}
-        disabled={isConnecting || activeWallet?.isConnected}
+        disabled={isConnecting || activeWallet?.isConnected || hardhatStatus !== 'connected'}
         className="flex items-center justify-center w-full py-3 px-4 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-md transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
       >
         {isConnecting ? (

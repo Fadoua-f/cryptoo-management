@@ -4,9 +4,11 @@ import { ethers } from 'ethers';
 declare class BlockchainService {
   web3: Web3;
   provider: ethers.providers.JsonRpcProvider;
+  isConnected: boolean;
   
   constructor();
   initialize(): void;
+  checkConnection(): Promise<boolean>;
   
   createWallet(): Promise<{
     address: string;

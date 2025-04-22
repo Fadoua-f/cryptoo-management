@@ -6,7 +6,7 @@ A comprehensive cryptocurrency management system built with React, Node.js, and 
 
 Before you begin, ensure you have the following installed:
 - [Node.js](https://nodejs.org/) (v18 or higher)
-- [Git](https://git-scm.com/download/win)
+- [Git](https://git-scm.com/downloads)
 - [Visual Studio Code](https://code.visualstudio.com/) (recommended)
 - [MySQL](https://dev.mysql.com/downloads/installer/) (v8.0 or higher)
 
@@ -34,7 +34,7 @@ npm install
 4. Install blockchain development dependencies:
 ```bash
 npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
-npm install ethers@^5.7.2 web3@^1.9.0
+npm install ethers@^5.7.2 web3@^4.16.0
 ```
 
 ## Environment Setup
@@ -71,7 +71,7 @@ module.exports = {
 };
 ```
 
-2. Initialize Hardhat:d
+2. Initialize Hardhat:
 ```bash
 npx hardhat init
 ```
@@ -99,63 +99,63 @@ CREATE DATABASE crypto_management;
 
 ## Running the Application
 
-1. Start the backend server:
+### Starting the Hardhat Node
+
+Before using the application, you need to start the Hardhat local node:
+
+1. Use the provided script (recommended):
 ```bash
-cd project/backend
-npm run dev
+./start-hardhat.sh
 ```
 
-2. In a new terminal, start the frontend development server:
+2. Or manually start the node:
+```bash
+npx hardhat node
+```
+
+Keep the terminal window open while using the application. The Hardhat node provides a local Ethereum network for development and testing.
+
+### Starting the Backend
+
+```bash
+cd project/backend
+npm start
+```
+
+### Starting the Frontend
+
 ```bash
 cd project
 npm run dev
 ```
 
-3. Open your browser and navigate to `http://localhost:5173`
+## Using the Application
 
-## Project Structure
-
-```
-project/
-├── backend/           # Backend server code
-│   ├── config/       # Configuration files
-│   ├── routes/       # API routes
-│   ├── middleware/   # Custom middleware
-│   └── services/     # Business logic
-├── src/              # Frontend source code
-│   ├── components/   # React components
-│   ├── context/      # React context
-│   ├── pages/        # Page components
-│   └── types/        # TypeScript types
-└── public/           # Static assets
-```
-
-## Features
-
-- User authentication and authorization
-- Two-factor authentication
-- Wallet management
-- Transaction history
-- Smart contract integration
-- Local blockchain development and testing
-- Secure API endpoints
+1. Register a new account or log in with existing credentials
+2. Navigate to the "Créer un portefeuille" page
+3. Select the cryptocurrency type (ETH, BTC, USDT)
+4. Click "Créer un portefeuille" to create a new wallet on the Hardhat network
+5. The wallet will be created and added to your account
+6. You can now view your wallet balance and make transactions
 
 ## Troubleshooting
 
-If you encounter any issues:
+### Hardhat Connection Issues
 
-1. Make sure all dependencies are installed correctly
-2. Verify that MySQL server is running
-3. Check that all environment variables are set correctly
-4. Ensure ports 5000 and 5173 are not in use by other applications
+If you see an error message saying "Hardhat n'est pas connecté" (Hardhat is not connected):
 
-## Contributing
+1. Make sure the Hardhat node is running in a separate terminal
+2. Check that the node is running on the default port (8545)
+3. Refresh the application page
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### Wallet Creation Issues
+
+If you encounter issues creating a wallet:
+
+1. Ensure you're logged in to the application
+2. Verify that the Hardhat node is running
+3. Check the browser console for error messages
+4. Try refreshing the page and attempting again
 
 ## License
 
