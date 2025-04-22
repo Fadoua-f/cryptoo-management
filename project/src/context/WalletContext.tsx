@@ -105,6 +105,7 @@ interface WalletContextType extends WalletState {
   addWallet: (params: AddWalletParams) => void;
   removeWallet: (id: string) => void;
   setActiveWallet: (wallet: Wallet | null) => void;
+  refreshBalances: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -163,33 +164,98 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     const updateBalances = async () => {
       if (state.wallets.length === 0) return;
 
+      console.log('[WalletContext] Updating wallet balances...');
       try {
         const updatedWallets = await Promise.all(
           state.wallets.map(async (wallet) => {
             try {
+              console.log(`[WalletContext] Fetching balance for wallet ${wallet.address}...`);
               const balance = await blockchainService.getBalance(wallet.address);
-              return { ...wallet, balance };
+              console.log(`[WalletContext] Updated balance for ${wallet.address}: ${balance} ${wallet.currency}`);
+              
+              // Only update if balance has changed
+              if (wallet.balance !== balance) {
+                console.log(`[WalletContext] Balance changed for ${wallet.address}: ${wallet.balance} -> ${balance}`);
+                return { ...wallet, balance };
+              }
+              return wallet;
             } catch (error) {
-              console.error(`Failed to update balance for wallet ${wallet.address}:`, error);
+              console.error(`[WalletContext] Failed to update balance for wallet ${wallet.address}:`, error);
               return wallet;
             }
           })
         );
 
-        dispatch({ type: 'LOAD_WALLETS', payload: updatedWallets });
+        // Check if any balances actually changed
+        const hasChanges = updatedWallets.some((wallet, index) => 
+          wallet.balance !== state.wallets[index].balance
+        );
+
+        if (hasChanges) {
+          console.log('[WalletContext] Balances updated, dispatching LOAD_WALLETS');
+          dispatch({ type: 'LOAD_WALLETS', payload: updatedWallets });
+          
+          // Update active wallet if it changed
+          if (state.activeWallet) {
+            const updatedActiveWallet = updatedWallets.find(w => w.id === state.activeWallet?.id);
+            if (updatedActiveWallet && updatedActiveWallet.balance !== state.activeWallet.balance) {
+              console.log(`[WalletContext] Updating active wallet balance: ${state.activeWallet.balance} -> ${updatedActiveWallet.balance}`);
+              dispatch({ type: 'SET_ACTIVE_WALLET', payload: updatedActiveWallet });
+            }
+          }
+        } else {
+          console.log('[WalletContext] No balance changes detected');
+        }
       } catch (error) {
-        console.error('Failed to update wallet balances:', error);
+        console.error('[WalletContext] Failed to update wallet balances:', error);
       }
     };
 
     // Update immediately
     updateBalances();
 
-    // Then update every 10 seconds
-    const interval = setInterval(updateBalances, 10000);
+    // Then update every 5 seconds (reduced from 10 seconds for more responsiveness)
+    const interval = setInterval(updateBalances, 5000);
 
     return () => clearInterval(interval);
   }, [state.wallets.length]); // Only recreate the interval if the number of wallets changes
+
+  // Add a function to manually refresh balances
+  const refreshBalances = async () => {
+    console.log('[WalletContext] Manual balance refresh requested');
+    if (state.wallets.length === 0) {
+      console.log('[WalletContext] No wallets to refresh');
+      return;
+    }
+
+    try {
+      const updatedWallets = await Promise.all(
+        state.wallets.map(async (wallet) => {
+          try {
+            console.log(`[WalletContext] Manually fetching balance for wallet ${wallet.address}...`);
+            const balance = await blockchainService.getBalance(wallet.address);
+            console.log(`[WalletContext] Updated balance for ${wallet.address}: ${balance} ${wallet.currency}`);
+            return { ...wallet, balance };
+          } catch (error) {
+            console.error(`[WalletContext] Failed to update balance for wallet ${wallet.address}:`, error);
+            return wallet;
+          }
+        })
+      );
+
+      dispatch({ type: 'LOAD_WALLETS', payload: updatedWallets });
+      
+      // Update active wallet if it changed
+      if (state.activeWallet) {
+        const updatedActiveWallet = updatedWallets.find(w => w.id === state.activeWallet?.id);
+        if (updatedActiveWallet) {
+          dispatch({ type: 'SET_ACTIVE_WALLET', payload: updatedActiveWallet });
+        }
+      }
+    } catch (error) {
+      console.error('[WalletContext] Failed to refresh wallet balances:', error);
+    }
+  };
 
   // Connect wallet (create a new wallet in the backend)
   const connectWallet = async (currency: string) => {
@@ -378,6 +444,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         addWallet,
         removeWallet,
         setActiveWallet,
+        refreshBalances,
       }}
     >
       {children}

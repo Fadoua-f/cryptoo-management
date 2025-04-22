@@ -1,4 +1,4 @@
-import { ExternalLink, Plus, Trash2, Wallet } from 'lucide-react';
+import { ExternalLink, Plus, RefreshCw, Trash2, Wallet } from 'lucide-react';
 import React, { useState } from 'react';
 
 import { AddWalletParams } from '../../types/wallet.types';
@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useWallet } from '../../context/WalletContext';
 
 const WalletList: React.FC = () => {
-  const { wallets, addWallet, removeWallet, setActiveWallet, activeWallet } = useWallet();
+  const { wallets, addWallet, removeWallet, setActiveWallet, activeWallet, refreshBalances } = useWallet();
   const { isAuthenticated } = useAuth();
   
   const [showAddWalletForm, setShowAddWalletForm] = useState(false);
@@ -89,17 +89,27 @@ const WalletList: React.FC = () => {
     <div className="bg-white p-6 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Mes Portefeuilles</h2>
-        <button
-          onClick={() => setShowAddWalletForm(!showAddWalletForm)}
-          className="flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
-        >
-          {showAddWalletForm ? 'Annuler' : (
-            <>
-              <Plus size={16} className="mr-1" />
-              Ajouter
-            </>
-          )}
-        </button>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => refreshBalances()}
+            className="flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+            title="Actualiser les soldes"
+          >
+            <RefreshCw size={16} className="mr-1" />
+            Actualiser
+          </button>
+          <button
+            onClick={() => setShowAddWalletForm(!showAddWalletForm)}
+            className="flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+          >
+            {showAddWalletForm ? 'Annuler' : (
+              <>
+                <Plus size={16} className="mr-1" />
+                Ajouter
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Add Wallet Form */}

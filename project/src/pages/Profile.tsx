@@ -2,7 +2,6 @@ import { LogOut, Mail, Shield, User } from 'lucide-react';
 import React, { useEffect } from 'react';
 
 import { Navigate } from 'react-router-dom';
-import TransactionTest from '../components/TransactionTest';
 import { TwoFactorSetup } from '../components/auth/TwoFactorSetup';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,7 +26,7 @@ const Profile: React.FC = () => {
             <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center mb-4">
               <User size={48} className="text-primary-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800">{user?.name}</h2>
+            <h2 className="text-2xl font-bold text-gray-800">{user?.firstName} {user?.lastName}</h2>
             <p className="text-gray-500 flex items-center mt-2">
               <Mail size={16} className="mr-2" />
               {user?.email}
@@ -80,9 +79,6 @@ const Profile: React.FC = () => {
             <TwoFactorSetup />
           </div>
         </div>
-
-        {/* Transaction Test Component */}
-        <TransactionTest />
       </div>
     </div>
   );

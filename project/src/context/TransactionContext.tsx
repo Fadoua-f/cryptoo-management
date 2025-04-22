@@ -11,7 +11,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { activeWallet } = useWallet();
+  const { activeWallet, refreshBalances } = useWallet();
 
   const loadTransactions = useCallback(async (walletId: string) => {
     console.log('[TransactionContext] Loading transactions for wallet:', walletId);
@@ -118,6 +118,10 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
             status: apiTransaction.status
           });
           setTransactions(prev => [...prev, apiTransaction]);
+          
+          // Refresh balances after successful transaction
+          console.log('[TransactionContext] Refreshing wallet balances...');
+          await refreshBalances();
         } catch (blockchainError) {
           console.error('[TransactionContext] Blockchain transaction failed:', blockchainError);
           console.error('[TransactionContext] Error details:', {
@@ -137,6 +141,10 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
           status: apiTransaction.status
         });
         setTransactions(prev => [...prev, apiTransaction]);
+        
+        // Refresh balances after successful transaction
+        console.log('[TransactionContext] Refreshing wallet balances...');
+        await refreshBalances();
       }
     } catch (err) {
       console.error('[TransactionContext] Transaction error:', err);

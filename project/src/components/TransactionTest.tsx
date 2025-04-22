@@ -8,7 +8,7 @@ const TransactionTest: React.FC = () => {
   const { transactions, createTransaction, isLoading, error } = useTransaction();
   const { activeWallet } = useWallet();
   const [amount, setAmount] = useState('');
-  const [type, setType] = useState<TransactionType>('buy');
+  const [type, setType] = useState<TransactionType>('SEND');
 
   const handleCreateTransaction = async () => {
     if (!activeWallet) {
@@ -18,14 +18,23 @@ const TransactionTest: React.FC = () => {
 
     try {
       await createTransaction({
-        walletId: activeWallet.id,
+        wallet_id: activeWallet.id,
         type,
-        amount: parseFloat(amount),
-        currency: activeWallet.currency || 'BTC',
+        amount: parseFloat(amount).toString(),
       });
       setAmount('');
     } catch (error) {
       console.error('Failed to create transaction:', error);
+    }
+  };
+
+  // Format date safely
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch (e) {
+      return 'N/A';
     }
   };
 
@@ -49,8 +58,8 @@ const TransactionTest: React.FC = () => {
               onChange={(e) => setType(e.target.value as TransactionType)}
               className="border p-2 rounded w-full"
             >
-              <option value="buy">Buy</option>
-              <option value="sell">Sell</option>
+              <option value="SEND">Send</option>
+              <option value="RECEIVE">Receive</option>
             </select>
           </div>
           <div>
@@ -85,9 +94,9 @@ const TransactionTest: React.FC = () => {
                 className="border p-3 rounded"
               >
                 <div>Type: {tx.type}</div>
-                <div>Amount: {tx.amount} {tx.currency}</div>
+                <div>Amount: {tx.amount} ETH</div>
                 <div>Status: {tx.status}</div>
-                <div>Created: {new Date(tx.createdAt).toLocaleString()}</div>
+                <div>Created: {formatDate(tx.created_at)}</div>
               </li>
             ))}
           </ul>
