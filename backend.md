@@ -211,3 +211,103 @@ npm run dev
    - Solution: Change your DB_HOST in .env from `localhost` to `127.0.0.1` (IPv4 address)
    - This forces the connection to use IPv4 instead of IPv6
    - Alternatively, you can configure MySQL to accept IPv6 connections by editing your MySQL configuration file 
+
+## Resetting Database Tables
+
+If you need to reset your database tables, here are several approaches:
+
+### 1. Drop and Recreate the Database
+
+To completely reset everything and start fresh:
+
+```sql
+-- Connect to MySQL
+mysql -u root
+
+-- Drop the existing database (if it exists)
+DROP DATABASE IF EXISTS crypto_demo;
+
+-- Create a new database
+CREATE DATABASE crypto_demo;
+
+-- Use the database
+USE crypto_demo;
+```
+
+### 2. Drop and Recreate Specific Tables
+
+To reset specific tables while keeping others:
+
+```sql
+-- Connect to MySQL
+mysql -u root
+
+-- Use the database
+USE crypto_demo;
+
+-- Drop specific tables (in the correct order to respect foreign key constraints)
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS wallets;
+DROP TABLE IF EXISTS two_factor_auth;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS users;
+```
+
+### 3. Truncate Tables (Keep Structure, Remove Data)
+
+To keep the table structure but remove all data:
+
+```sql
+-- Connect to MySQL
+mysql -u root
+
+-- Use the database
+USE crypto_demo;
+
+-- Truncate tables (in the correct order to respect foreign key constraints)
+TRUNCATE TABLE transactions;
+TRUNCATE TABLE wallets;
+TRUNCATE TABLE two_factor_auth;
+TRUNCATE TABLE sessions;
+TRUNCATE TABLE users;
+```
+
+### 4. Apply the Schema File
+
+After dropping tables or the database, you can apply the schema.sql file to recreate the tables with the correct structure:
+
+```bash
+# For Windows:
+cd project\backend
+mysql -u root crypto_demo < database/schema.sql
+
+# For macOS/Linux:
+cd project/backend
+mysql -u root crypto_demo < database/schema.sql
+```
+
+### 5. Add Missing Columns
+
+If you're getting "Unknown column" errors, you can add the missing columns:
+
+```sql
+-- Connect to MySQL
+mysql -u root
+
+-- Use the database
+USE crypto_demo;
+
+-- Add missing columns to specific tables
+ALTER TABLE wallets ADD COLUMN currency VARCHAR(10) NOT NULL DEFAULT 'ETH' AFTER user_id;
+ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255);
+```
+
+### Important Notes:
+
+1. Always be careful with the order of operations when resetting tables due to foreign key constraints. Tables with foreign keys should be dropped or truncated after the tables they reference.
+
+2. If you're using the schema.sql file from the project, it uses UUIDs for IDs and has a more detailed table structure than the basic setup in this guide.
+
+3. After resetting tables, you may need to restart your backend server for the changes to take effect.
+
+4. If you're just trying to fix a specific column issue, it's better to add the missing column rather than resetting the entire database. 
