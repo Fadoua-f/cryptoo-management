@@ -25,7 +25,7 @@ fi
 
 # Start Hardhat node
 echo -e "${GREEN}Starting Hardhat node...${NC}"
-echo -e "${YELLOW}Press Ctrl+C to stop the node when you're done.${NC}"
+eceho -e "${YELLOW}Press Ctrl+C to stop the node when you're done.${NC}"
 echo ""
 
 npx hardhat node

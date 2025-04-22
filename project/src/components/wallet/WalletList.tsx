@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 
 import { AddWalletParams } from '../../types/wallet.types';
 import { Link } from 'react-router-dom';
+import { blockchainService } from '../../lib/blockchain';
 import { useAuth } from '../../context/AuthContext';
 import { useWallet } from '../../context/WalletContext';
 
@@ -55,6 +56,38 @@ const WalletList: React.FC = () => {
     }
   };
 
+  const handleRefreshBalances = async () => {
+    console.log('=== REFRESHING WALLET BALANCES ===');
+    console.log('Current wallets:', wallets);
+    
+    // Check Hardhat connection status
+    const isConnected = await blockchainService.checkConnection();
+    console.log('Hardhat connection status:', isConnected ? 'Connected' : 'Disconnected');
+    
+    if (isConnected) {
+      // Get current block number
+      const blockNumber = await blockchainService.web3.eth.getBlockNumber();
+      console.log('Current Hardhat block number:', blockNumber);
+      
+      // Get accounts from Hardhat
+      const accounts = await blockchainService.web3.eth.getAccounts();
+      console.log('Hardhat accounts:', accounts);
+      
+      // Get balances for all accounts
+      console.log('Fetching balances for all Hardhat accounts:');
+      for (const account of accounts) {
+        const balance = await blockchainService.web3.eth.getBalance(account);
+        const balanceEth = blockchainService.web3.utils.fromWei(balance, 'ether');
+        console.log(`Account ${account}: ${balanceEth} ETH`);
+      }
+    }
+    
+    // Call the original refreshBalances function
+    await refreshBalances();
+    
+    console.log('=== REFRESH COMPLETE ===');
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-md">
@@ -91,7 +124,7 @@ const WalletList: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-800">Mes Portefeuilles</h2>
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => refreshBalances()}
+            onClick={() => handleRefreshBalances()}
             className="flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
             title="Actualiser les soldes"
           >
