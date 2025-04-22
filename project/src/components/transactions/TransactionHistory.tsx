@@ -6,16 +6,12 @@ import { useTransaction } from '../../context/TransactionContext';
 import { useWallet } from '../../context/WalletContext';
 
 const TransactionHistory: React.FC = () => {
-  const { transactions } = useTransaction();
+  const { transactions, isLoading } = useTransaction();
   const { activeWallet } = useWallet();
   
-  // Filter transactions for the active wallet
-  const walletTransactions = activeWallet
-    ? transactions.filter(tx => tx.walletId === activeWallet.id)
-    : [];
-
   // Format date
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -26,23 +22,29 @@ const TransactionHistory: React.FC = () => {
     });
   };
 
-  // Format address for display (truncate)
-  const formatAddress = (address: string | undefined) => {
-    if (!address) return 'N/A';
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-  };
-
   // Status icon
   const StatusIcon = ({ status }: { status: string }) => {
-    switch (status) {
-      case 'confirmed':
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
         return <CheckCircle size={16} className="text-success-500" />;
-      case 'failed':
+      case 'FAILED':
         return <XCircle size={16} className="text-error-500" />;
       default:
         return <Clock size={16} className="text-warning-500" />;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Historique des Transactions</h2>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement des transactions...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -52,7 +54,7 @@ const TransactionHistory: React.FC = () => {
         <div className="text-center py-8 text-gray-500">
           <p>Sélectionnez un portefeuille pour voir son historique de transactions.</p>
         </div>
-      ) : walletTransactions.length === 0 ? (
+      ) : transactions.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p>Aucune transaction pour ce portefeuille.</p>
         </div>
@@ -61,9 +63,6 @@ const TransactionHistory: React.FC = () => {
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
                 </th>
@@ -76,23 +75,20 @@ const TransactionHistory: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {walletTransactions.map((tx) => (
+              {transactions.map((tx) => (
                 <tr key={tx.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(tx.createdAt)}
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    {tx.type === 'SEND' ? 'Envoi' : 'Réception'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    {tx.type === 'buy' ? 'Achat' : 'Vente'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    {tx.amount} {tx.currency}
+                    {tx.amount} ETH
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <StatusIcon status={tx.status} />
                       <span className="ml-1.5 text-sm capitalize">
-                        {tx.status === 'confirmed' ? 'Confirmée' : 
-                         tx.status === 'failed' ? 'Échouée' : 'En attente'}
+                        {tx.status === 'COMPLETED' ? 'Confirmée' : 
+                         tx.status === 'FAILED' ? 'Échouée' : 'En attente'}
                       </span>
                     </div>
                   </td>
