@@ -131,17 +131,6 @@ const WalletList: React.FC = () => {
             <RefreshCw size={16} className="mr-1" />
             Actualiser
           </button>
-          <button
-            onClick={() => setShowAddWalletForm(!showAddWalletForm)}
-            className="flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
-          >
-            {showAddWalletForm ? 'Annuler' : (
-              <>
-                <Plus size={16} className="mr-1" />
-                Ajouter
-              </>
-            )}
-          </button>
         </div>
       </div>
 
