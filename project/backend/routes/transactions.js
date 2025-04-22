@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const { v4: uuidv4 } = require('uuid');
 
 // Get all transactions for a wallet
 router.get('/wallet/:walletId', async (req, res) => {
@@ -19,28 +20,23 @@ router.get('/wallet/:walletId', async (req, res) => {
 // Create a new transaction
 router.post('/', async (req, res) => {
     const { wallet_id, type, amount } = req.body;
+    const transactionId = uuidv4();
+    
     try {
         // Start a transaction
         await pool.query('START TRANSACTION');
 
         // Insert the transaction
         const [result] = await pool.query(
-            'INSERT INTO transactions (wallet_id, type, amount) VALUES (?, ?, ?)',
-            [wallet_id, type, amount]
-        );
-
-        // Update wallet balance
-        const balanceChange = type === 'deposit' ? amount : -amount;
-        await pool.query(
-            'UPDATE wallets SET balance = balance + ? WHERE id = ?',
-            [balanceChange, wallet_id]
+            'INSERT INTO transactions (id, wallet_id, type, amount) VALUES (?, ?, ?, ?)',
+            [transactionId, wallet_id, type, amount]
         );
 
         // Commit the transaction
         await pool.query('COMMIT');
 
         res.status(201).json({
-            id: result.insertId,
+            id: transactionId,
             wallet_id,
             type,
             amount,

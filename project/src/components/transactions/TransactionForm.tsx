@@ -1,11 +1,12 @@
+import { AlertCircle, Send } from 'lucide-react';
 import React, { useState } from 'react';
-import { Send, AlertCircle } from 'lucide-react';
-import { useWallet } from '../../context/WalletContext';
+
 import { useTransaction } from '../../context/TransactionContext';
+import { useWallet } from '../../context/WalletContext';
 
 const TransactionForm: React.FC = () => {
   const { activeWallet } = useWallet();
-  const { sendTransaction, isLoading, error } = useTransaction();
+  const { createTransaction, isLoading, error } = useTransaction();
   
   const [toAddress, setToAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -33,9 +34,11 @@ const TransactionForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted');
     setTransactionSuccess(false);
     
     if (!activeWallet) {
+      console.log('No active wallet');
       setFormErrors({ 
         toAddress: 'Veuillez d\'abord sélectionner un portefeuille' 
       });
@@ -43,13 +46,21 @@ const TransactionForm: React.FC = () => {
     }
     
     if (validateForm()) {
+      console.log('Form validated, attempting transaction', {
+        walletId: activeWallet.id,
+        toAddress,
+        amount
+      });
       try {
-        await sendTransaction({
-          fromAddress: activeWallet.address,
-          toAddress,
-          amount,
+        await createTransaction({
+          walletId: activeWallet.id,
+          type: 'sell',
+          amount: Number(amount),
+          currency: 'ETH',
+          toAddress: toAddress
         });
         
+        console.log('Transaction created successfully');
         setToAddress('');
         setAmount('');
         setFormErrors({});
@@ -60,8 +71,11 @@ const TransactionForm: React.FC = () => {
           setTransactionSuccess(false);
         }, 5000);
       } catch (error) {
+        console.error('Transaction error:', error);
         // Error is handled by the context
       }
+    } else {
+      console.log('Form validation failed', formErrors);
     }
   };
 

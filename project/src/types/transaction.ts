@@ -16,6 +16,7 @@ export interface CreateTransactionDTO {
   amount: number;
   currency: string;
   walletId: string;
+  toAddress?: string;
 }
 
 export interface TransactionContextType {
