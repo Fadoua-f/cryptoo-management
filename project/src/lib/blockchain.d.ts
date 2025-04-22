@@ -28,15 +28,5 @@ declare class BlockchainService {
   ): Promise<any>;
 }
 
-declare module '../lib/blockchain' {
-    export interface WalletCreationResult {
-        address: string;
-        privateKey: string;
-    }
-
-    export const blockchainService: {
-        createWallet: () => Promise<WalletCreationResult>;
-        getBalance: (address: string) => Promise<string>;
-        sendETH: (toAddress: string, amount: string) => Promise<any>;
-    };
-} 
+declare const blockchainService: BlockchainService;
+export { blockchainService }; 

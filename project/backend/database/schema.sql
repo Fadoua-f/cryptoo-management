@@ -1,6 +1,6 @@
 -- Create database
-CREATE DATABASE IF NOT EXISTS crypto_wallet;
-USE crypto_wallet;
+CREATE DATABASE IF NOT EXISTS crypto_demo;
+USE crypto_demo;
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS two_factor_auth (
 CREATE TABLE IF NOT EXISTS wallets (
     id VARCHAR(36) PRIMARY KEY,
     user_id VARCHAR(36) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'ETH',
     address VARCHAR(42) NOT NULL,
     encrypted_private_key TEXT NOT NULL,
     name VARCHAR(100),

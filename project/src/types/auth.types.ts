@@ -1,7 +1,12 @@
 export interface User {
   id: string;
   email: string;
-  name?: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastLogin: string | null;
+  isActive: boolean;
 }
 
 export interface AuthState {
@@ -19,6 +24,6 @@ export interface LoginCredentials {
 export interface RegisterCredentials {
   email: string;
   password: string;
-  confirmPassword: string;
-  name?: string;
+  firstName: string;
+  lastName: string;
 }

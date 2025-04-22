@@ -268,31 +268,82 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   // Add wallet (for manual addition)
   const addWallet = async (params: AddWalletParams) => {
+    console.log('[WalletContext] Starting manual wallet addition:', {
+      name: params.name,
+      hasPrivateKey: !!params.privateKey,
+      currency: params.currency || 'ETH'
+    });
+
+    if (!isAuthenticated || !user) {
+      console.error('[WalletContext] Cannot add wallet: User not authenticated');
+      throw new Error('Vous devez être connecté pour ajouter un portefeuille');
+    }
+
     try {
       // Import wallet using private key
+      console.log('[WalletContext] Importing wallet using private key...');
       const { address } = await blockchainService.importWallet(params.privateKey);
+      console.log('[WalletContext] Wallet imported successfully:', { address });
       
       // Get the initial balance
+      console.log('[WalletContext] Fetching initial balance...');
       const balance = await blockchainService.getBalance(address);
+      console.log('[WalletContext] Initial balance fetched:', { balance });
+      
+      // Save wallet to backend
+      console.log('[WalletContext] Saving wallet to backend...', {
+        userId: user.id,
+        currency: params.currency || 'ETH',
+        address,
+        hasPrivateKey: !!params.privateKey
+      });
+      
+      const savedWallet = await walletAPI.createWallet(
+        user.id, 
+        params.currency || 'ETH', 
+        address, 
+        params.privateKey
+      );
+      
+      console.log('[WalletContext] Wallet saved to backend:', {
+        id: savedWallet.id,
+        address: savedWallet.address,
+        currency: savedWallet.currency
+      });
       
       const wallet: Wallet = {
-        id: Date.now().toString(),
-        address: address,
+        id: savedWallet.id,
+        address: savedWallet.address,
         privateKey: params.privateKey,
         name: params.name,
         balance: balance,
-        currency: 'ETH',
+        currency: savedWallet.currency,
         isConnected: true,
       };
+
+      console.log('[WalletContext] Adding wallet to state:', {
+        id: wallet.id,
+        name: wallet.name,
+        address: wallet.address,
+        balance: wallet.balance,
+        currency: wallet.currency
+      });
 
       dispatch({ type: 'ADD_WALLET', payload: wallet });
       
       // Set as active wallet if no other wallet is active
       if (!state.activeWallet) {
+        console.log('[WalletContext] Setting as active wallet (no active wallet)');
         dispatch({ type: 'SET_ACTIVE_WALLET', payload: wallet });
       }
-    } catch (error) {
-      console.error('Error adding wallet:', error);
+
+      console.log('[WalletContext] Wallet addition completed successfully');
+    } catch (error: any) {
+      console.error('[WalletContext] Error adding wallet:', error);
+      console.error('[WalletContext] Error details:', {
+        message: error?.message,
+        stack: error?.stack
+      });
       throw error;
     }
   };

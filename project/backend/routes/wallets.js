@@ -27,11 +27,13 @@ router.post('/', async (req, res) => {
         user_id,
         currency,
         address,
-        encrypted_private_key: '***' // Hide private key in logs
+        has_private_key: !!encrypted_private_key,
+        timestamp: new Date().toISOString()
     });
 
     try {
         // First check if user exists
+        console.log(`[POST /wallets] Checking if user ${user_id} exists...`);
         const [users] = await pool.query(
             'SELECT id FROM users WHERE id = ?',
             [user_id]
@@ -45,6 +47,7 @@ router.post('/', async (req, res) => {
         console.log(`[POST /wallets] User ${user_id} found, proceeding with wallet creation`);
 
         // Check if wallet address already exists
+        console.log(`[POST /wallets] Checking if wallet address ${address} already exists...`);
         const [existingWallets] = await pool.query(
             'SELECT id FROM wallets WHERE address = ?',
             [address]
@@ -55,26 +58,40 @@ router.post('/', async (req, res) => {
             return res.status(409).json({ error: 'Wallet address already exists' });
         }
 
+        console.log(`[POST /wallets] No existing wallet found with address ${address}, proceeding with creation`);
+
         // Create the wallet
+        console.log(`[POST /wallets] Inserting new wallet into database...`);
         const [result] = await pool.query(
             'INSERT INTO wallets (id, user_id, currency, address, encrypted_private_key, name) VALUES (UUID(), ?, ?, ?, ?, ?)',
             [user_id, currency, address, encrypted_private_key, `${currency} Wallet`]
         );
-        console.log(`[POST /wallets] Wallet created successfully`);
+        console.log(`[POST /wallets] Wallet created successfully with ID: ${result.insertId}`);
 
         // Fetch the created wallet
+        console.log(`[POST /wallets] Fetching created wallet details...`);
         const [wallet] = await pool.query(
             'SELECT * FROM wallets WHERE id = ?',
             [result.insertId]
         );
         console.log(`[POST /wallets] Retrieved created wallet:`, {
-            ...wallet[0],
-            encrypted_private_key: '***' // Hide private key in logs
+            id: wallet[0].id,
+            user_id: wallet[0].user_id,
+            currency: wallet[0].currency,
+            address: wallet[0].address,
+            name: wallet[0].name,
+            created_at: wallet[0].created_at,
+            has_private_key: !!wallet[0].encrypted_private_key
         });
 
         res.status(201).json(wallet[0]);
     } catch (error) {
         console.error('[POST /wallets] Error creating wallet:', error);
+        console.error('[POST /wallets] Error details:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
         res.status(500).json({ error: 'Failed to create wallet' });
     }
 });
