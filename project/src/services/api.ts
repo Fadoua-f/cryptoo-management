@@ -52,11 +52,12 @@ export const walletAPI = {
     console.log('[walletAPI] Found wallets:', response.data);
     return response.data;
   },
-  createWallet: async (userId: string, currency: string, address: string, encryptedPrivateKey: string) => {
+  createWallet: async (userId: string, currency: string, address: string, encryptedPrivateKey: string, name?: string) => {
     console.log('[walletAPI] Creating new wallet:', {
       userId,
       currency,
       address,
+      name: name || 'Nouveau portefeuille',
       hasPrivateKey: !!encryptedPrivateKey
     });
     
@@ -64,13 +65,15 @@ export const walletAPI = {
       user_id: userId, 
       currency, 
       address,
+      name: name || 'Nouveau portefeuille',
       encrypted_private_key: encryptedPrivateKey
     });
     
     console.log('[walletAPI] Wallet created successfully:', {
       id: response.data.id,
       address: response.data.address,
-      currency: response.data.currency
+      currency: response.data.currency,
+      name: response.data.name
     });
     
     return response.data;

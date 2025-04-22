@@ -16,6 +16,9 @@ const ConnectWallet: React.FC = () => {
   const [newWalletName, setNewWalletName] = useState('');
   const [newWalletPrivateKey, setNewWalletPrivateKey] = useState('');
   const [formErrors, setFormErrors] = useState<{ name?: string; privateKey?: string }>({});
+  const [showCreateWalletForm, setShowCreateWalletForm] = useState(false);
+  const [createWalletName, setCreateWalletName] = useState('');
+  const [createWalletErrors, setCreateWalletErrors] = useState<{ name?: string }>({});
 
   // Check if Hardhat is running
   useEffect(() => {
@@ -51,6 +54,46 @@ const ConnectWallet: React.FC = () => {
       await connectWallet(currency);
     } catch (error) {
       console.error('Failed to connect wallet:', error);
+    }
+  };
+
+  const handleCreateWallet = async () => {
+    if (!isAuthenticated) {
+      return;
+    }
+    
+    // Validate form
+    const errors: { name?: string } = {};
+    
+    if (!createWalletName.trim()) {
+      errors.name = 'Le nom est requis';
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setCreateWalletErrors(errors);
+      return;
+    }
+    
+    if (hardhatStatus !== 'connected') {
+      // Try to reconnect to Hardhat
+      const isConnected = await blockchainService.checkConnection();
+      setHardhatStatus(isConnected ? 'connected' : 'disconnected');
+      
+      if (!isConnected) {
+        return; // Don't proceed if Hardhat is not running
+      }
+    }
+    
+    try {
+      // Create a new wallet using connectWallet with the specified name
+      await connectWallet(currency, createWalletName.trim());
+      
+      // Reset form state
+      setCreateWalletName('');
+      setCreateWalletErrors({});
+      setShowCreateWalletForm(false);
+    } catch (error) {
+      console.error('Failed to create wallet:', error);
     }
   };
 
@@ -143,7 +186,7 @@ const ConnectWallet: React.FC = () => {
         </div>
       )}
       
-      {!showAddWalletForm ? (
+      {!showAddWalletForm && !showCreateWalletForm ? (
         <div className="flex flex-col space-y-4">
           <button
             onClick={() => setShowAddWalletForm(true)}
@@ -154,7 +197,7 @@ const ConnectWallet: React.FC = () => {
           </button>
           
           <button
-            onClick={handleConnectWallet}
+            onClick={() => setShowCreateWalletForm(true)}
             disabled={isConnecting || hardhatStatus !== 'connected'}
             className="flex items-center justify-center w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-md transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
           >
@@ -173,6 +216,63 @@ const ConnectWallet: React.FC = () => {
               </>
             )}
           </button>
+        </div>
+      ) : showCreateWalletForm ? (
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Créer un nouveau portefeuille</h3>
+            <button
+              onClick={() => setShowCreateWalletForm(false)}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Annuler
+            </button>
+          </div>
+          
+          <form onSubmit={(e) => { e.preventDefault(); handleCreateWallet(); }} className="space-y-4">
+            <div>
+              <label htmlFor="createWalletName" className="block text-sm font-medium text-gray-700 mb-1">
+                Nom du portefeuille
+              </label>
+              <input
+                type="text"
+                id="createWalletName"
+                value={createWalletName}
+                onChange={(e) => setCreateWalletName(e.target.value)}
+                className={`block w-full px-3 py-2 border ${
+                  createWalletErrors.name ? 'border-error-500' : 'border-gray-300'
+                } rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500`}
+                placeholder="Mon portefeuille principal"
+              />
+              {createWalletErrors.name && (
+                <p className="mt-1 text-sm text-error-600">{createWalletErrors.name}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="createCurrency" className="block text-sm font-medium text-gray-700 mb-1">
+                Devise
+              </label>
+              <select
+                id="createCurrency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="ETH">Ethereum (ETH)</option>
+                <option value="BTC">Bitcoin (BTC)</option>
+                <option value="USDT">Tether (USDT)</option>
+              </select>
+            </div>
+            
+            <button
+              type="submit"
+              disabled={isConnecting || hardhatStatus !== 'connected'}
+              className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isConnecting ? 'Création en cours...' : 'Créer le portefeuille'}
+            </button>
+          </form>
         </div>
       ) : (
         <div className="mb-6">

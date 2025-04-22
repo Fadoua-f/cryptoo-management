@@ -107,7 +107,7 @@ const walletReducer = (state: WalletState, action: WalletAction): WalletState =>
 
 // Context
 interface WalletContextType extends WalletState {
-  connectWallet: (currency: string) => Promise<void>;
+  connectWallet: (currency: string, name?: string) => Promise<void>;
   addWallet: (params: AddWalletParams) => void;
   removeWallet: (id: string) => void;
   setActiveWallet: (wallet: Wallet | null) => void;
@@ -309,7 +309,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   };
 
   // Connect wallet (create a new wallet in the backend)
-  const connectWallet = async (currency: string) => {
+  const connectWallet = async (currency: string, name?: string) => {
     if (!isAuthenticated || !user) {
       console.log('[WalletContext] Cannot connect wallet: User not authenticated');
       throw new Error('Vous devez être connecté pour ajouter un portefeuille');
@@ -318,6 +318,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     console.log('[WalletContext] Starting wallet connection process:', {
       userId: user.id,
       currency,
+      name: name || 'Nouveau portefeuille',
       isAuthenticated,
       currentWallets: state.wallets.length
     });
@@ -338,14 +339,16 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         userId: user.id,
         currency,
         address,
+        name: name || 'Nouveau portefeuille',
         hasPrivateKey: !!encryptedPrivateKey
       });
       
-      const newWallet = await walletAPI.createWallet(user.id, currency, address, encryptedPrivateKey);
+      const newWallet = await walletAPI.createWallet(user.id, currency, address, encryptedPrivateKey, name || 'Nouveau portefeuille');
       console.log('[WalletContext] Wallet saved to database:', {
         id: newWallet.id,
         address: newWallet.address,
         currency: newWallet.currency,
+        name: newWallet.name,
         balance: newWallet.balance
       });
       
@@ -360,6 +363,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           id: w.id,
           address: w.address,
           currency: w.currency,
+          name: w.name,
           balance: w.balance
         }))
       });
