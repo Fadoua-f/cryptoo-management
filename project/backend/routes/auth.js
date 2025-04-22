@@ -8,14 +8,15 @@ const { auth } = require('../middleware/auth');
 
 // Register new user
 router.post('/register', async (req, res) => {
-    const { username, email, password } = req.body;
+    const { email, password, first_name, last_name } = req.body;
     try {
+        const userId = uuidv4();
         const hashedPassword = await bcrypt.hash(password, 10);
         const [result] = await pool.query(
-            'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-            [username, email, hashedPassword]
+            'INSERT INTO users (id, email, password_hash, first_name, last_name) VALUES (?, ?, ?, ?, ?)',
+            [userId, email, hashedPassword, first_name || null, last_name || null]
         );
-        res.status(201).json({ message: 'User created successfully', userId: result.insertId });
+        res.status(201).json({ message: 'User created successfully', userId: userId });
     } catch (error) {
         console.error('Error registering user:', error);
         res.status(500).json({ error: 'Failed to register user' });
@@ -32,7 +33,7 @@ router.post('/login', async (req, res) => {
         }
 
         const user = users[0];
-        const validPassword = await bcrypt.compare(password, user.password);
+        const validPassword = await bcrypt.compare(password, user.password_hash);
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }

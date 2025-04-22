@@ -1,7 +1,9 @@
+import { CheckCircle, Clock, ExternalLink, XCircle } from 'lucide-react';
+
 import React from 'react';
+import { Transaction } from '../../types/transaction';
 import { useTransaction } from '../../context/TransactionContext';
 import { useWallet } from '../../context/WalletContext';
-import { ExternalLink, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 const TransactionHistory: React.FC = () => {
   const { transactions } = useTransaction();
@@ -13,8 +15,8 @@ const TransactionHistory: React.FC = () => {
     : [];
 
   // Format date
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
@@ -25,7 +27,8 @@ const TransactionHistory: React.FC = () => {
   };
 
   // Format address for display (truncate)
-  const formatAddress = (address: string) => {
+  const formatAddress = (address: string | undefined) => {
+    if (!address) return 'N/A';
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
@@ -62,10 +65,7 @@ const TransactionHistory: React.FC = () => {
                   Date
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  De
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  À
+                  Type
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Montant
@@ -73,25 +73,19 @@ const TransactionHistory: React.FC = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {walletTransactions.map((tx) => (
                 <tr key={tx.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(tx.timestamp)}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono">
-                    {formatAddress(tx.fromAddress)}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono">
-                    {formatAddress(tx.toAddress)}
+                    {formatDate(tx.createdAt)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    {tx.amount} ETH
+                    {tx.type === 'buy' ? 'Achat' : 'Vente'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    {tx.amount} {tx.currency}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
@@ -101,17 +95,6 @@ const TransactionHistory: React.FC = () => {
                          tx.status === 'failed' ? 'Échouée' : 'En attente'}
                       </span>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                    <a
-                      href={`https://etherscan.io/tx/${tx.hash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary-600 hover:text-primary-900 inline-flex items-center"
-                    >
-                      <span className="mr-1">Explorer</span>
-                      <ExternalLink size={14} />
-                    </a>
                   </td>
                 </tr>
               ))}
