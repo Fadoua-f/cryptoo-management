@@ -5,29 +5,76 @@ const { pool } = require('../config/database');
 
 // Get all wallets for a user
 router.get('/:userId', async (req, res) => {
+    const userId = req.params.userId;
+    console.log(`[GET /wallets/${userId}] Fetching wallets for user`);
     try {
         const [wallets] = await pool.query(
             'SELECT * FROM wallets WHERE user_id = ?',
-            [req.params.userId]
+            [userId]
         );
+        console.log(`[GET /wallets/${userId}] Found ${wallets.length} wallets:`, wallets);
         res.json(wallets);
     } catch (error) {
-        console.error('Error fetching wallets:', error);
+        console.error(`[GET /wallets/${userId}] Error fetching wallets:`, error);
         res.status(500).json({ error: 'Failed to fetch wallets' });
     }
 });
 
 // Create a new wallet
 router.post('/', async (req, res) => {
-    const { user_id, currency, balance } = req.body;
+    const { user_id, currency, address, encrypted_private_key } = req.body;
+    console.log('[POST /wallets] Creating new wallet with data:', {
+        user_id,
+        currency,
+        address,
+        encrypted_private_key: '***' // Hide private key in logs
+    });
+
     try {
-        const [result] = await pool.query(
-            'INSERT INTO wallets (user_id, currency, balance) VALUES (?, ?, ?)',
-            [user_id, currency, balance]
+        // First check if user exists
+        const [users] = await pool.query(
+            'SELECT id FROM users WHERE id = ?',
+            [user_id]
         );
-        res.status(201).json({ id: result.insertId, user_id, currency, balance });
+        
+        if (users.length === 0) {
+            console.error(`[POST /wallets] User ${user_id} not found`);
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        console.log(`[POST /wallets] User ${user_id} found, proceeding with wallet creation`);
+
+        // Check if wallet address already exists
+        const [existingWallets] = await pool.query(
+            'SELECT id FROM wallets WHERE address = ?',
+            [address]
+        );
+
+        if (existingWallets.length > 0) {
+            console.error(`[POST /wallets] Wallet with address ${address} already exists`);
+            return res.status(409).json({ error: 'Wallet address already exists' });
+        }
+
+        // Create the wallet
+        const [result] = await pool.query(
+            'INSERT INTO wallets (id, user_id, currency, address, encrypted_private_key, name) VALUES (UUID(), ?, ?, ?, ?, ?)',
+            [user_id, currency, address, encrypted_private_key, `${currency} Wallet`]
+        );
+        console.log(`[POST /wallets] Wallet created successfully`);
+
+        // Fetch the created wallet
+        const [wallet] = await pool.query(
+            'SELECT * FROM wallets WHERE id = ?',
+            [result.insertId]
+        );
+        console.log(`[POST /wallets] Retrieved created wallet:`, {
+            ...wallet[0],
+            encrypted_private_key: '***' // Hide private key in logs
+        });
+
+        res.status(201).json(wallet[0]);
     } catch (error) {
-        console.error('Error creating wallet:', error);
+        console.error('[POST /wallets] Error creating wallet:', error);
         res.status(500).json({ error: 'Failed to create wallet' });
     }
 });
@@ -35,14 +82,17 @@ router.post('/', async (req, res) => {
 // Update wallet balance
 router.put('/:id', async (req, res) => {
     const { balance } = req.body;
+    const walletId = req.params.id;
+    console.log(`[PUT /wallets/${walletId}] Updating wallet balance to ${balance}`);
     try {
         await pool.query(
             'UPDATE wallets SET balance = ? WHERE id = ?',
-            [balance, req.params.id]
+            [balance, walletId]
         );
+        console.log(`[PUT /wallets/${walletId}] Wallet balance updated successfully`);
         res.json({ message: 'Wallet updated successfully' });
     } catch (error) {
-        console.error('Error updating wallet:', error);
+        console.error(`[PUT /wallets/${walletId}] Error updating wallet:`, error);
         res.status(500).json({ error: 'Failed to update wallet' });
     }
 });

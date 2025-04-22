@@ -1,16 +1,19 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 
+import AuthStatus from '../components/auth/AuthStatus';
 import { Button } from '../components/ui/button';
 import React from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTwoFactor } from '../context/TwoFactorContext';
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const { isTwoFactorEnabled, isTwoFactorVerified } = useTwoFactor();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
-    // In a real app, you would clear authentication tokens here
+    logout();
     navigate('/login');
   };
 
@@ -28,7 +31,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card>
           <CardHeader>
             <CardTitle>Account Security</CardTitle>
@@ -71,15 +74,19 @@ export function DashboardPage() {
             <div className="space-y-4">
               <div>
                 <p className="text-sm font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">demo@example.com</p>
+                <p className="text-sm text-muted-foreground">{user?.email || 'Not logged in'}</p>
               </div>
               <div>
                 <p className="text-sm font-medium">Account Type</p>
-                <p className="text-sm text-muted-foreground">Demo Account</p>
+                <p className="text-sm text-muted-foreground">User Account</p>
               </div>
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mb-8">
+        <AuthStatus />
       </div>
     </div>
   );

@@ -122,29 +122,35 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   useEffect(() => {
     const loadWallets = async () => {
       if (isAuthenticated && user) {
+        console.log('[WalletContext] Loading wallets for authenticated user:', {
+          userId: user.id,
+          isAuthenticated
+        });
         try {
           const wallets = await walletAPI.getWallets(user.id);
+          console.log('[WalletContext] Wallets loaded from API:', {
+            count: wallets.length,
+            wallets: wallets.map((w: Wallet) => ({
+              ...w,
+              encrypted_private_key: '***' // Hide private key in logs
+            }))
+          });
           
-          // Transform API wallets to match our Wallet type
-          const transformedWallets: Wallet[] = wallets.map((wallet: any) => ({
-            id: wallet.id.toString(),
-            address: wallet.id.toString(), // Using wallet ID as address
-            name: `${wallet.currency} Wallet`,
-            balance: wallet.balance.toString(),
-            currency: wallet.currency,
-            isConnected: true,
-          }));
-          
-          dispatch({ type: 'LOAD_WALLETS', payload: transformedWallets });
+          dispatch({ type: 'LOAD_WALLETS', payload: wallets });
           
           // Set the first wallet as active if there are any
-          if (transformedWallets.length > 0 && !state.activeWallet) {
-            dispatch({ type: 'SET_ACTIVE_WALLET', payload: transformedWallets[0] });
+          if (wallets.length > 0 && !state.activeWallet) {
+            console.log('[WalletContext] Setting first wallet as active:', {
+              id: wallets[0].id,
+              address: wallets[0].address
+            });
+            dispatch({ type: 'SET_ACTIVE_WALLET', payload: wallets[0] });
           }
         } catch (error) {
-          console.error('Failed to load wallets from API', error);
+          console.error('[WalletContext] Failed to load wallets:', error);
         }
       } else {
+        console.log('[WalletContext] User not authenticated, resetting wallets');
         dispatch({ type: 'RESET_WALLETS' });
       }
     };
@@ -188,34 +194,75 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   // Connect wallet (create a new wallet in the backend)
   const connectWallet = async (currency: string) => {
     if (!isAuthenticated || !user) {
+      console.log('[WalletContext] Cannot connect wallet: User not authenticated');
       throw new Error('Vous devez être connecté pour ajouter un portefeuille');
     }
+
+    console.log('[WalletContext] Starting wallet connection process:', {
+      userId: user.id,
+      currency,
+      isAuthenticated,
+      currentWallets: state.wallets.length
+    });
 
     dispatch({ type: 'CONNECT_WALLET_REQUEST' });
     try {
       // Create a new wallet using Web3
+      console.log('[WalletContext] Creating new wallet using blockchain service...');
       const { address, privateKey } = await blockchainService.createWallet();
+      console.log('[WalletContext] New wallet created with address:', address);
+      
+      // Encrypt the private key (in a real app, use proper encryption)
+      const encryptedPrivateKey = privateKey; // TODO: Implement proper encryption
+      console.log('[WalletContext] Private key prepared for storage');
       
       // Create a new wallet in the backend
-      const newWallet = await walletAPI.createWallet(user.id, currency, address);
-      
-      // Transform API wallet to match our Wallet type
-      const wallet: Wallet = {
-        id: newWallet.id.toString(),
-        address: address,
-        privateKey: privateKey, // Store private key securely
-        name: `${currency} Wallet`,
-        balance: '0.00',
-        currency: currency,
-        isConnected: true,
-      };
-      
-      dispatch({ type: 'CONNECT_WALLET_SUCCESS', payload: wallet });
-    } catch (error) {
-      dispatch({ 
-        type: 'CONNECT_WALLET_FAILURE', 
-        payload: error instanceof Error ? error.message : 'Erreur de connexion du portefeuille' 
+      console.log('[WalletContext] Saving wallet to backend database...', {
+        userId: user.id,
+        currency,
+        address,
+        hasPrivateKey: !!encryptedPrivateKey
       });
+      
+      const newWallet = await walletAPI.createWallet(user.id, currency, address, encryptedPrivateKey);
+      console.log('[WalletContext] Wallet saved to database:', {
+        id: newWallet.id,
+        address: newWallet.address,
+        currency: newWallet.currency,
+        balance: newWallet.balance
+      });
+      
+      dispatch({ type: 'CONNECT_WALLET_SUCCESS', payload: newWallet });
+      
+      // Load updated wallet list
+      console.log('[WalletContext] Reloading wallet list...');
+      const wallets = await walletAPI.getWallets(user.id);
+      console.log('[WalletContext] Updated wallet list:', {
+        count: wallets.length,
+        wallets: wallets.map((w: Wallet) => ({
+          id: w.id,
+          address: w.address,
+          currency: w.currency,
+          balance: w.balance
+        }))
+      });
+      
+      dispatch({ type: 'LOAD_WALLETS', payload: wallets });
+      
+      // Set as active wallet if it's the first one
+      if (wallets.length === 1) {
+        console.log('[WalletContext] Setting as active wallet (first wallet)');
+        dispatch({ type: 'SET_ACTIVE_WALLET', payload: newWallet });
+      }
+    } catch (error: any) {
+      console.error('[WalletContext] Error connecting wallet:', error);
+      console.error('[WalletContext] Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        response: error?.response?.data
+      });
+      dispatch({ type: 'CONNECT_WALLET_FAILURE', payload: error?.message || 'Failed to connect wallet' });
+      throw error;
     }
   };
 

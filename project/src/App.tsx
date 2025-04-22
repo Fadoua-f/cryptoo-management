@@ -2,11 +2,13 @@ import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
 import Contact from './pages/Contact';
+import { DashboardPage } from './pages/DashboardPage';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Navbar from './components/layout/Navbar';
 import Profile from './pages/Profile';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import React from 'react';
 import Register from './pages/Register';
 import { TransactionProvider } from './context/TransactionContext';
@@ -36,8 +38,13 @@ function App() {
                       <Route path="/" element={<Home />} />
                       <Route path="/login" element={<Login />} />
                       <Route path="/register" element={<Register />} />
-                      <Route path="/profile" element={<Profile />} />
                       <Route path="/contact" element={<Contact />} />
+                      
+                      {/* Protected Routes */}
+                      <Route element={<ProtectedRoute />}>
+                        <Route path="/dashboard" element={<DashboardPage />} />
+                        <Route path="/profile" element={<Profile />} />
+                      </Route>
                     </Routes>
                   </main>
                   <Footer />

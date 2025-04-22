@@ -75,34 +75,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Check if user is already logged in
   React.useEffect(() => {
+    console.log('[AuthContext] Checking for stored user and token');
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
+    
+    console.log('[AuthContext] Stored data:', {
+      hasStoredUser: !!storedUser,
+      hasToken: !!token
+    });
     
     if (storedUser && token) {
       try {
         const user = JSON.parse(storedUser);
+        console.log('[AuthContext] Successfully parsed stored user:', {
+          id: user.id,
+          email: user.email
+        });
         dispatch({ type: 'LOGIN_SUCCESS', payload: user });
       } catch (error) {
-        console.error('Failed to parse user from localStorage', error);
+        console.error('[AuthContext] Failed to parse user from localStorage', error);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
       }
+    } else {
+      console.log('[AuthContext] No stored user or token found');
     }
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
+    console.log('[AuthContext] Attempting login with email:', credentials.email);
     dispatch({ type: 'LOGIN_REQUEST' });
     try {
       const response = await authAPI.login(credentials);
+      console.log('[AuthContext] Login response:', {
+        hasUser: !!response.user,
+        requires2FA: !!response.requires2FA
+      });
+      
+      // Check if user exists in response
+      if (!response.user) {
+        console.log('[AuthContext] Login failed: No user found');
+        dispatch({ type: 'LOGIN_FAILURE', payload: 'Invalid credentials' });
+        return { requires2FA: false };
+      }
       
       // Check if 2FA is required
       if (response.requires2FA) {
+        console.log('[AuthContext] 2FA required for login');
         return { requires2FA: true };
       }
 
+      console.log('[AuthContext] Login successful, dispatching LOGIN_SUCCESS');
       dispatch({ type: 'LOGIN_SUCCESS', payload: response.user });
+      
+      // Store user data in localStorage
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
       return { requires2FA: false };
     } catch (error) {
+      console.error('[AuthContext] Login failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       dispatch({ type: 'LOGIN_FAILURE', payload: errorMessage });
       throw error;

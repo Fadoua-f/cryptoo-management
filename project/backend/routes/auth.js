@@ -44,7 +44,23 @@ router.post('/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        res.json({ token, userId: user.id });
+        // Return user object along with token
+        const userResponse = {
+            id: user.id,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            createdAt: user.created_at,
+            updatedAt: user.updated_at,
+            lastLogin: user.last_login,
+            isActive: user.is_active
+        };
+
+        res.json({ 
+            token, 
+            user: userResponse,
+            requires2FA: false // We'll implement 2FA later
+        });
     } catch (error) {
         console.error('Error logging in:', error);
         res.status(500).json({ error: 'Failed to login' });

@@ -20,19 +20,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setIsLoading(true);
         try {
           const apiTransactions = await transactionAPI.getTransactions(activeWallet.id);
-          
-          // Transform API transactions to match our Transaction type
-          const transformedTransactions: Transaction[] = apiTransactions.map((tx: any) => ({
-            id: tx.id.toString(),
-            type: tx.type === 'deposit' ? 'buy' : 'sell',
-            amount: tx.amount,
-            currency: activeWallet.currency || 'ETH',
-            status: 'confirmed',
-            createdAt: new Date(tx.created_at).toISOString(),
-            walletId: activeWallet.id,
-          }));
-          
-          setTransactions(transformedTransactions);
+          setTransactions(apiTransactions);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to load transactions');
         } finally {
@@ -55,86 +43,36 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setIsLoading(true);
     setError(null);
     try {
+      // Ensure we have the wallet_id
+      const transactionData = {
+        ...transaction,
+        wallet_id: activeWallet.id,
+        amount: transaction.amount.toString()
+      };
+
       // If it's an ETH transfer, use the blockchain service first
-      if (transaction.currency === 'ETH' && transaction.toAddress) {
+      if (transaction.to_address) {
         console.log('Sending ETH transaction:', {
-          toAddress: transaction.toAddress,
+          toAddress: transaction.to_address,
           amount: transaction.amount
         });
         
         try {
           // First send the ETH transaction
-          const result = await sendETH(transaction.toAddress, transaction.amount.toString());
+          const result = await sendETH(transaction.to_address, transaction.amount);
           console.log('ETH transaction result:', result);
           
-          // Then try to create the transaction record in the backend
-          try {
-            const apiTransaction = await transactionAPI.createTransaction(
-              transaction.walletId,
-              transaction.type === 'buy' ? 'deposit' : 'withdrawal',
-              transaction.amount
-            );
-            
-            // Transform API transaction to match our Transaction type
-            const newTransaction: Transaction = {
-              id: apiTransaction.id.toString(),
-              type: transaction.type,
-              amount: transaction.amount,
-              currency: transaction.currency,
-              status: 'confirmed',
-              createdAt: new Date().toISOString(),
-              walletId: transaction.walletId,
-            };
-            
-            setTransactions(prev => [...prev, newTransaction]);
-          } catch (apiError) {
-            console.error('Failed to create transaction record in backend:', apiError);
-            // Still show success since the blockchain transaction succeeded
-            setTransactions(prev => [...prev, {
-              id: Date.now().toString(),
-              type: transaction.type,
-              amount: transaction.amount,
-              currency: transaction.currency,
-              status: 'confirmed',
-              createdAt: new Date().toISOString(),
-              walletId: transaction.walletId,
-            }]);
-          }
+          // Then create the transaction record in the backend
+          const apiTransaction = await transactionAPI.createTransaction(transactionData);
+          setTransactions(prev => [...prev, apiTransaction]);
         } catch (blockchainError) {
           console.error('Blockchain transaction failed:', blockchainError);
           throw blockchainError;
         }
       } else {
         // Handle other transaction types through the API
-        const apiTransaction = await transactionAPI.createTransaction(
-          transaction.walletId,
-          transaction.type === 'buy' ? 'deposit' : 'withdrawal',
-          transaction.amount
-        );
-        
-        // Transform API transaction to match our Transaction type
-        const newTransaction: Transaction = {
-          id: apiTransaction.id.toString(),
-          type: transaction.type,
-          amount: transaction.amount,
-          currency: transaction.currency,
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-          walletId: transaction.walletId,
-        };
-        
-        setTransactions(prev => [...prev, newTransaction]);
-        
-        // Update transaction status to confirmed after a delay
-        setTimeout(() => {
-          setTransactions(prev => 
-            prev.map(tx => 
-              tx.id === newTransaction.id 
-                ? { ...tx, status: 'confirmed' }
-                : tx
-            )
-          );
-        }, 2000);
+        const apiTransaction = await transactionAPI.createTransaction(transactionData);
+        setTransactions(prev => [...prev, apiTransaction]);
       }
     } catch (err) {
       console.error('Transaction error:', err);

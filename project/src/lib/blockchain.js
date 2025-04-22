@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 
 class BlockchainService {
   constructor() {
+    console.log('[BlockchainService] Initializing service...');
     this.web3 = null;
     this.provider = null;
     this.initialize();
@@ -12,28 +13,62 @@ class BlockchainService {
     try {
       // Initialize Web3 with local Hardhat network
       const localUrl = 'http://127.0.0.1:8545';
+      console.log('[BlockchainService] Connecting to local network at:', localUrl);
       
       this.web3 = new Web3(localUrl);
       this.provider = new ethers.providers.JsonRpcProvider(localUrl);
       
       // Test the connection
       this.web3.eth.getBlockNumber()
-        .then(block => console.log('Connected to network, current block:', block))
-        .catch(err => console.error('Failed to connect to network:', err));
+        .then(block => {
+          console.log('[BlockchainService] Successfully connected to network');
+          console.log('[BlockchainService] Current block number:', block);
+        })
+        .catch(err => {
+          console.error('[BlockchainService] Failed to connect to network:', err);
+          console.error('[BlockchainService] Error details:', {
+            message: err.message,
+            code: err.code,
+            data: err.data
+          });
+        });
     } catch (error) {
-      console.error('Failed to initialize blockchain service:', error);
+      console.error('[BlockchainService] Failed to initialize:', error);
+      console.error('[BlockchainService] Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
     }
   }
 
   async createWallet() {
+    console.log('[BlockchainService] Creating new wallet...');
     try {
+      if (!this.web3) {
+        console.error('[BlockchainService] Web3 not initialized');
+        throw new Error('Blockchain service not initialized');
+      }
+
       const account = this.web3.eth.accounts.create();
+      console.log('[BlockchainService] Wallet created successfully:', {
+        address: account.address,
+        hasPrivateKey: !!account.privateKey
+      });
+
+      // Get initial balance
+      const balance = await this.getBalance(account.address);
+      console.log('[BlockchainService] New wallet balance:', balance, 'ETH');
+
       return {
         address: account.address,
         privateKey: account.privateKey,
       };
     } catch (error) {
-      console.error('Error creating wallet:', error);
+      console.error('[BlockchainService] Error creating wallet:', error);
+      console.error('[BlockchainService] Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
       throw new Error('Failed to create wallet');
     }
   }

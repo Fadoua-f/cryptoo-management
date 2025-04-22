@@ -1,11 +1,12 @@
+import { ArrowRight, Wallet } from 'lucide-react';
 import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+
 import ConnectWallet from '../components/wallet/ConnectWallet';
-import WalletList from '../components/wallet/WalletList';
+import { Link } from 'react-router-dom';
 import TransactionForm from '../components/transactions/TransactionForm';
 import TransactionHistory from '../components/transactions/TransactionHistory';
-import { Wallet, ArrowRight } from 'lucide-react';
+import WalletList from '../components/wallet/WalletList';
+import { useAuth } from '../context/AuthContext';
 
 const Home: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -112,7 +113,13 @@ const Home: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <ConnectWallet />
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h3 className="text-xl font-semibold mb-2">Portefeuille Local</h3>
+          <p className="text-gray-600 mb-4">
+            Créez un portefeuille sur le réseau Hardhat local pour gérer vos actifs Ethereum.
+          </p>
+          <ConnectWallet />
+        </div>
         <WalletList />
       </div>
 

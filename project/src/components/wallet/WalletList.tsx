@@ -1,11 +1,14 @@
-import { ExternalLink, Plus, Trash2 } from 'lucide-react';
+import { ExternalLink, Plus, Trash2, Wallet } from 'lucide-react';
 import React, { useState } from 'react';
 
 import { AddWalletParams } from '../../types/wallet.types';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { useWallet } from '../../context/WalletContext';
 
 const WalletList: React.FC = () => {
   const { wallets, addWallet, removeWallet, setActiveWallet, activeWallet } = useWallet();
+  const { isAuthenticated } = useAuth();
   
   const [showAddWalletForm, setShowAddWalletForm] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
@@ -51,6 +54,36 @@ const WalletList: React.FC = () => {
       setActiveWallet(wallet);
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Mes Portefeuilles</h2>
+        </div>
+        
+        <div className="p-4 bg-info-50 text-info-700 rounded-md mb-6">
+          <p className="font-medium">Connexion requise</p>
+          <p className="text-sm mt-1">Vous devez être connecté pour gérer vos portefeuilles.</p>
+        </div>
+        
+        <div className="flex flex-col space-y-4">
+          <Link 
+            to="/login" 
+            className="flex items-center justify-center w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-md transition-colors"
+          >
+            Se connecter
+          </Link>
+          <Link 
+            to="/register" 
+            className="flex items-center justify-center w-full py-3 px-4 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-md transition-colors"
+          >
+            Créer un compte
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -120,12 +153,15 @@ const WalletList: React.FC = () => {
       )}
 
       {/* Wallets List */}
-      {wallets.length === 0 ? (
+      {wallets.length === 0 && !showAddWalletForm && (
         <div className="text-center py-8 text-gray-500">
-          <p>Vous n'avez pas encore de portefeuilles.</p>
-          <p className="mt-2">Connectez MetaMask ou ajoutez un portefeuille manuellement.</p>
+          <Wallet size={48} className="mx-auto mb-4 text-gray-400" />
+          <p>Aucun portefeuille trouvé.</p>
+          <p className="mt-2">Ajoutez un portefeuille manuellement en utilisant une clé privée.</p>
         </div>
-      ) : (
+      )}
+
+      {wallets.length > 0 && (
         <div className="space-y-4">
           {wallets.map((wallet) => (
             <div 

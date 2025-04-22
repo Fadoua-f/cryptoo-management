@@ -1,6 +1,7 @@
-import React from 'react';
+import { Github, Mail, Twitter, Wallet } from 'lucide-react';
+
 import { Link } from 'react-router-dom';
-import { Wallet, Mail, Github, Twitter } from 'lucide-react';
+import React from 'react';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -60,29 +61,26 @@ const Footer: React.FC = () => {
 
           {/* Resources */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Ressources</h3>
-            <ul className="space-y-2">
-              <li>
-                <a href="https://metamask.io/" className="text-gray-400 hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
-                  MetaMask
-                </a>
-              </li>
-              <li>
-                <a href="https://ethereum.org/" className="text-gray-400 hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
-                  Ethereum
-                </a>
-              </li>
-              <li>
-                <a href="https://docs.ethers.org/" className="text-gray-400 hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
-                  Ethers.js
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  FAQ
-                </a>
-              </li>
-            </ul>
+            <div className="mb-4">
+              <h3 className="text-white text-lg font-semibold mb-2">Ressources</h3>
+              <ul className="space-y-1">
+                <li>
+                  <a href="https://ethereum.org/" className="text-gray-400 hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
+                    Ethereum
+                  </a>
+                </li>
+                <li>
+                  <a href="https://hardhat.org/" className="text-gray-400 hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
+                    Hardhat
+                  </a>
+                </li>
+                <li>
+                  <a href="https://web3js.readthedocs.io/" className="text-gray-400 hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
+                    Web3.js
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 

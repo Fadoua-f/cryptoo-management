@@ -47,15 +47,38 @@ export const authAPI = {
 // Wallet API
 export const walletAPI = {
   getWallets: async (userId: string) => {
+    console.log('[walletAPI] Fetching wallets for user:', userId);
     const response = await api.get(`/wallets/${userId}`);
+    console.log('[walletAPI] Found wallets:', response.data);
     return response.data;
   },
-  createWallet: async (userId: string, currency: string, balance: number = 0) => {
-    const response = await api.post('/wallets', { user_id: userId, currency, balance });
+  createWallet: async (userId: string, currency: string, address: string, encryptedPrivateKey: string) => {
+    console.log('[walletAPI] Creating new wallet:', {
+      userId,
+      currency,
+      address,
+      hasPrivateKey: !!encryptedPrivateKey
+    });
+    
+    const response = await api.post('/wallets', { 
+      user_id: userId, 
+      currency, 
+      address,
+      encrypted_private_key: encryptedPrivateKey
+    });
+    
+    console.log('[walletAPI] Wallet created successfully:', {
+      id: response.data.id,
+      address: response.data.address,
+      currency: response.data.currency
+    });
+    
     return response.data;
   },
   updateWallet: async (walletId: string, balance: number) => {
+    console.log('[walletAPI] Updating wallet balance:', { walletId, balance });
     const response = await api.put(`/wallets/${walletId}`, { balance });
+    console.log('[walletAPI] Wallet updated successfully:', response.data);
     return response.data;
   },
 };
@@ -66,14 +89,12 @@ export const transactionAPI = {
     const response = await api.get(`/transactions/wallet/${walletId}`);
     return response.data;
   },
-  createTransaction: async (walletId: string, type: 'deposit' | 'withdrawal', amount: number) => {
+  createTransaction: async (data: { wallet_id: string; type: string; amount: string }) => {
     try {
-      console.log('Creating transaction in backend:', { walletId, type, amount });
+      console.log('Creating transaction in backend:', data);
       
       const response = await api.post('/transactions', { 
-        wallet_id: walletId, 
-        type, 
-        amount,
+        ...data,
         created_at: new Date().toISOString()
       });
       console.log('Transaction created in backend:', response.data);
@@ -83,11 +104,9 @@ export const transactionAPI = {
       // If the backend is not available, return a mock transaction
       return {
         id: Date.now().toString(),
-        wallet_id: walletId,
-        type,
-        amount,
+        ...data,
         created_at: new Date().toISOString(),
-        status: 'confirmed'
+        status: 'PENDING'
       };
     }
   },

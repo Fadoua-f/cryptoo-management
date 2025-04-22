@@ -1,22 +1,23 @@
-export type TransactionType = 'buy' | 'sell';
-export type TransactionStatus = 'pending' | 'confirmed' | 'failed';
+export type TransactionType = 'SEND' | 'RECEIVE';
+export type TransactionStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
 
 export interface Transaction {
   id: string;
   type: TransactionType;
   amount: number;
-  currency: string;
+  from_address: string;
+  to_address: string;
+  tx_hash: string;
   status: TransactionStatus;
-  createdAt: string;
-  walletId: string;
+  created_at: string;
+  wallet_id: string;
 }
 
 export interface CreateTransactionDTO {
+  wallet_id: string;
   type: TransactionType;
-  amount: number;
-  currency: string;
-  walletId: string;
-  toAddress?: string;
+  amount: string;
+  to_address?: string;
 }
 
 export interface TransactionContextType {
