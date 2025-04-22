@@ -1,4 +1,5 @@
 import "@nomicfoundation/hardhat-toolbox";
+import "hardhat-ethernal";
 
 import * as dotenv from "dotenv";
 
@@ -21,6 +22,13 @@ const config: HardhatUserConfig = {
     artifacts: "./artifacts",
     cache: "./cache",
     sources: "./"
+  },
+  ethernal: {
+    apiToken: process.env.ETHERNAL_API_TOKEN,
+    disableSync: false,
+    workspace: "test",
+    uploadAst: true,
+    disabled: false
   }
 };
 
