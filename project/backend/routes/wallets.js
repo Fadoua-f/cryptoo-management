@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2/promise');
 const { pool } = require('../config/database');
+const { v4: uuidv4 } = require('uuid');
 
 // Get all wallets for a user
 router.get('/:userId', async (req, res) => {
@@ -60,20 +61,29 @@ router.post('/', async (req, res) => {
 
         console.log(`[POST /wallets] No existing wallet found with address ${address}, proceeding with creation`);
 
+        // Generate a UUID for the wallet
+        const walletId = uuidv4();
+        
         // Create the wallet
         console.log(`[POST /wallets] Inserting new wallet into database...`);
-        const [result] = await pool.query(
-            'INSERT INTO wallets (id, user_id, currency, address, encrypted_private_key, name) VALUES (UUID(), ?, ?, ?, ?, ?)',
-            [user_id, currency, address, encrypted_private_key, `${currency} Wallet`]
+        await pool.query(
+            'INSERT INTO wallets (id, user_id, currency, address, encrypted_private_key, name) VALUES (?, ?, ?, ?, ?, ?)',
+            [walletId, user_id, currency, address, encrypted_private_key, `${currency} Wallet`]
         );
-        console.log(`[POST /wallets] Wallet created successfully with ID: ${result.insertId}`);
+        console.log(`[POST /wallets] Wallet created successfully with ID: ${walletId}`);
 
         // Fetch the created wallet
         console.log(`[POST /wallets] Fetching created wallet details...`);
         const [wallet] = await pool.query(
             'SELECT * FROM wallets WHERE id = ?',
-            [result.insertId]
+            [walletId]
         );
+        
+        if (!wallet || wallet.length === 0) {
+            console.error(`[POST /wallets] Failed to retrieve created wallet with ID: ${walletId}`);
+            return res.status(500).json({ error: 'Failed to retrieve created wallet' });
+        }
+        
         console.log(`[POST /wallets] Retrieved created wallet:`, {
             id: wallet[0].id,
             user_id: wallet[0].user_id,

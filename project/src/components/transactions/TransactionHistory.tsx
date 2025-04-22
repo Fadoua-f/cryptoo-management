@@ -9,11 +9,6 @@ const TransactionHistory: React.FC = () => {
   const { transactions } = useTransaction();
   const { activeWallet } = useWallet();
   
-  // Filter transactions for the active wallet
-  const walletTransactions = activeWallet
-    ? transactions.filter(tx => tx.walletId === activeWallet.id)
-    : [];
-
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -34,8 +29,8 @@ const TransactionHistory: React.FC = () => {
 
   // Status icon
   const StatusIcon = ({ status }: { status: string }) => {
-    switch (status) {
-      case 'confirmed':
+    switch (status.toLowerCase()) {
+      case 'completed':
         return <CheckCircle size={16} className="text-success-500" />;
       case 'failed':
         return <XCircle size={16} className="text-error-500" />;
@@ -52,7 +47,7 @@ const TransactionHistory: React.FC = () => {
         <div className="text-center py-8 text-gray-500">
           <p>Sélectionnez un portefeuille pour voir son historique de transactions.</p>
         </div>
-      ) : walletTransactions.length === 0 ? (
+      ) : transactions.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p>Aucune transaction pour ce portefeuille.</p>
         </div>
@@ -61,9 +56,6 @@ const TransactionHistory: React.FC = () => {
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
                 </th>
@@ -76,23 +68,20 @@ const TransactionHistory: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {walletTransactions.map((tx) => (
+              {transactions.map((tx) => (
                 <tr key={tx.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(tx.createdAt)}
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    {tx.type === 'SEND' ? 'Envoi' : 'Réception'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    {tx.type === 'buy' ? 'Achat' : 'Vente'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    {tx.amount} {tx.currency}
+                    {tx.amount} ETH
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <StatusIcon status={tx.status} />
                       <span className="ml-1.5 text-sm capitalize">
-                        {tx.status === 'confirmed' ? 'Confirmée' : 
-                         tx.status === 'failed' ? 'Échouée' : 'En attente'}
+                        {tx.status === 'COMPLETED' ? 'Confirmée' : 
+                         tx.status === 'FAILED' ? 'Échouée' : 'En attente'}
                       </span>
                     </div>
                   </td>
